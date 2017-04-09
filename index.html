@@ -1,0 +1,203 @@
+<html>
+<head>
+<title>P2</title>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="http://d3js.org/topojson.v2.min.js"></script>
+<script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+
+<style>
+svg { border: solid #ccc 1px;}
+#yearSlider { width: 1000px; }
+#legendText { text-anchor: middle; }
+
+</style>
+</head>
+<body>
+<svg id="map"></svg>
+<input id="yearSlider" type="range" min="1960" max="2010" value="1960" oninput="showMap(buttonSelection, value)">
+
+<br/>
+<button type="button" autofocus="TRUE" onclick="showMap('imports', yearSlider.value)">Imports</button>
+<button type="button" onclick="showMap('exports', yearSlider.value)">Exports</button>
+<br/>
+<svg id="timeline" height="500" width="1000"></svg>
+
+<h2>To think about</h2>
+<ul>
+  <li> What kind of scale? </li>
+  <li> Is there a difference between no data and zero imports/exports?</li>
+  <li> Should the scale reflect the min/max number for that year, or the min/max number for the whole dataset?</li>
+</ul>
+
+<script>
+var height = 500;
+var mapWidth = 1000;
+var width = 1500
+
+var map = d3.select("svg#map")
+  .attr("width", width)
+  .attr("height", height);
+
+var projection = d3.geoRobinson();
+var pathGenerator = d3.geoPath().projection(projection);
+
+//color scales
+var importColorScale = ["#ffffff", "#E3EEF4", "#C6DDE8", "#AACCDD", "#8EBBD2", "#5599BB", "#71AAC6", "#3988B0", "#1C77A4", "#006699"];
+var exportColorScale = ["#FFFFFF", "#F4E3E3", "#E8C6C6", "#DDAAAA", "#D28E8E", "#C67171", "#BB5555", "#B03939", "#A41C1C", "#990000"]
+
+//global scales, maps, and other stuff
+var importScale, exportScale, buttonSelection, importMapping, exportMapping;
+
+//get ready for sidebar gradient. code from: https://bl.ocks.org/mbostock/1086421
+var gradient = map.append("defs")
+.append("linearGradient")
+  .attr("id", "gradient")
+  .attr("x1", "50%")
+  .attr("y1", "0%")
+  .attr("x2", "50%")
+  .attr("y2", "100%")
+  .attr("spreadMethod", "pad");
+
+gradient.append("stop")
+  .attr("offset", "0%")
+  .attr("stop-color", "#fff");
+
+gradient.append("stop")
+  .attr("id", "end")
+  .attr("offset", "100%");
+
+var gradientRect = map.append("rect")
+    .attr("width", 30)
+    .attr("height", 470)
+    .attr("x", 20)
+    .attr("y", 30)
+    .attr("stroke", "#888");
+
+//labels that need to be refreshed every time a new button is clicked
+var legendLabels = map.append("g");
+
+//parse functions check every value and update the maximum for imports
+var maxImports = 0;
+var importArr = [];
+var parseImports = function(row){
+  row.ISO = Number(row.ISO);
+  Object.values(row).forEach(function(value,index){
+    if(index>1) {
+      value = +value;
+      importArr.push(value);
+      if(value>maxImports){ maxImports = value; }
+    }
+  })
+  return row;
+}
+
+//and the same for exports
+var maxExports = 0;
+var exportArr = [];
+var parseExports = function(row){
+  row.ISO = Number(row.ISO);
+  Object.values(row).forEach(function(value,index){
+    if(index>1) {
+      value = +value;
+      exportArr.push(value);
+      if(value>maxExports){ maxExports = value; }
+    }
+  })
+  return row;
+}
+
+d3.queue()
+  .defer(d3.json, "world-110m.json")
+  .defer(d3.csv, "imports.csv", parseImports)
+  .defer(d3.csv, "exports.csv", parseExports)
+  .await(function(error, rawCountries, rawImports, rawExports){
+
+    importMap = d3.map(rawImports, function(country){ return country.ISO; });
+    exportMap = d3.map(rawExports, function(country){ return country.ISO; });
+
+    //scales are weird. What kind? What kind of min/max?
+    //var impMax = d3.max(rawImports, function(d){ return d.yr1960; });
+    importScale = d3.scaleThreshold().domain(importArr).range(importColorScale);
+
+    // var expMax = d3.max(rawExports, function(d){ return d.yr1960; });
+    exportScale = d3.scaleThreshold().domain(exportArr).range(exportColorScale);
+
+    countries = topojson.feature(rawCountries, rawCountries.objects.countries);
+
+    //initialize to imports in 1960.
+    showMap("imports", 1960);
+  });
+
+function showMap(type, year){
+  buttonSelection = type;
+  //set buttonselection to imports and yearinput to access csv variables
+  var yearInput = "yr" + year;
+
+  projection.fitExtent([[50,0], [mapWidth, height]], countries);
+	pathGenerator = d3.geoPath().projection(projection);
+
+  //make and fill map
+	var paths = map.selectAll("path").data(countries.features);
+	paths.enter().append("path").attr("class", "country")
+	.merge(paths)
+  .attr("fill", function (country){
+    if(type=="imports"){
+      var data = importMap.get(country.id);
+      if (data) { return importScale(data[yearInput]); }
+    }
+    if(type=="exports"){
+      var data = exportMap.get(country.id);
+      if (data) { return exportScale(data[yearInput]); }
+    }
+  })
+  .attr("stroke", "#888")
+  .attr("d", function (country) {
+    return pathGenerator(country);
+  })
+  .on("click", function(country){
+    if(type=="imports"){
+      var data = importMap.get(country.id);
+      console.log("In " + year + ", " + data.Country + " imported $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.")
+    }
+    if(type=="exports"){
+      var data = exportMap.get(country.id);
+      console.log("In " + year + ", " + data.Country + " exported $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.")
+
+    }
+  });
+
+  //remove the previous legend info, otherwise it gets overwritten and obscured
+  d3.select("#legendText").remove();
+  legendLabels.append("text")
+    .attr("id", "legendText")
+    .attr("x", 30)
+    .attr("y", 20);
+
+  //remove old gradient color and add new one
+  d3.select("#end").remove();
+  if(type=="imports"){
+    gradient.append("stop")
+      .attr("id", "end")
+      .attr("offset", "100%")
+      .attr("stop-color", "#006699");
+    legendLabels.text("Imports");
+  }
+
+  if(type=="exports"){
+    gradient.append("stop")
+      .attr("id", "end")
+      .attr("offset", "100%")
+      .attr("stop-color", "#990000");
+    legendLabels.text("Exports");
+  }
+
+  gradientRect.attr("fill", "url(#gradient)");
+}
+
+function makeGraph(country){
+
+}
+
+</script>
+</body>
+</html>
