@@ -7,18 +7,22 @@
 
 <style>
 svg { border: solid #ccc 1px;}
-#yearSlider { width: 1000px; }
+#yearSlider { width: 1000px; margin-left: 50px; }
 #legendText { text-anchor: middle; }
+button { text-align: center; color: white; padding: 15px 212px; font-size: 20; border:none; }
+#importButton { background-color: #006699; margin: 5px 5px 5px 50px; }
+#exportButton { background-color: #990000; margin: 5px 5px 5px 5px; }
 
 </style>
 </head>
 <body>
 <svg id="map"></svg>
-<input id="yearSlider" type="range" min="1960" max="2010" value="1960" oninput="showMap(buttonSelection, value)">
-
 <br/>
-<button type="button" autofocus="TRUE" onclick="showMap('imports', yearSlider.value)">Imports</button>
-<button type="button" onclick="showMap('exports', yearSlider.value)">Exports</button>
+<button type="button" id="importButton" onclick="showMap('imports', yearSlider.value)">Imports</button>
+<button type="button" id="exportButton" onclick="showMap('exports', yearSlider.value)">Exports</button>
+<br/>
+<input id="yearSlider" type="range" min="1960" max="2010" value="1960" oninput="showMap(buttonSelection, value)">
+<svg id="slider" height="30" width="1050"></svg>
 <br/>
 <svg id="timeline" height="500" width="1000"></svg>
 
@@ -27,15 +31,16 @@ svg { border: solid #ccc 1px;}
   <li> What kind of scale? </li>
   <li> Is there a difference between no data and zero imports/exports?</li>
   <li> Should the scale reflect the min/max number for that year, or the min/max number for the whole dataset?</li>
+  <li>If using the wars data, what gets to count as a war? <a href="http://www.warscholar.org/1975.html">There are so many.</a></li>
 </ul>
 
 <script>
 var height = 500;
-var mapWidth = 1000;
+var mapWidth = 1050;
 var width = 1500
 
 var map = d3.select("svg#map")
-  .attr("width", width)
+  .attr("width", mapWidth)
   .attr("height", height);
 
 var projection = d3.geoRobinson();
@@ -105,21 +110,23 @@ var parseExports = function(row){
   })
   return row;
 }
+var parseWars = function(row){
+  row.Start = Number(row.Start);
+  row.End = Number(row.Start);
+}
 
 d3.queue()
   .defer(d3.json, "world-110m.json")
   .defer(d3.csv, "imports.csv", parseImports)
   .defer(d3.csv, "exports.csv", parseExports)
+  .defer(d3.csv, "wars.csv", parseWars)
   .await(function(error, rawCountries, rawImports, rawExports){
 
     importMap = d3.map(rawImports, function(country){ return country.ISO; });
     exportMap = d3.map(rawExports, function(country){ return country.ISO; });
 
     //scales are weird. What kind? What kind of min/max?
-    //var impMax = d3.max(rawImports, function(d){ return d.yr1960; });
     importScale = d3.scaleThreshold().domain(importArr).range(importColorScale);
-
-    // var expMax = d3.max(rawExports, function(d){ return d.yr1960; });
     exportScale = d3.scaleThreshold().domain(exportArr).range(exportColorScale);
 
     countries = topojson.feature(rawCountries, rawCountries.objects.countries);
@@ -168,10 +175,7 @@ function showMap(type, year){
 
   //remove the previous legend info, otherwise it gets overwritten and obscured
   d3.select("#legendText").remove();
-  legendLabels.append("text")
-    .attr("id", "legendText")
-    .attr("x", 30)
-    .attr("y", 20);
+
 
   //remove old gradient color and add new one
   d3.select("#end").remove();
@@ -180,7 +184,11 @@ function showMap(type, year){
       .attr("id", "end")
       .attr("offset", "100%")
       .attr("stop-color", "#006699");
-    legendLabels.text("Imports");
+    legendLabels.append("text")
+      .attr("id", "legendText")
+      .attr("x", 30)
+      .attr("y", 20)
+      .text("Imports");
   }
 
   if(type=="exports"){
@@ -188,13 +196,17 @@ function showMap(type, year){
       .attr("id", "end")
       .attr("offset", "100%")
       .attr("stop-color", "#990000");
-    legendLabels.text("Exports");
+    legendLabels.append("text")
+      .attr("id", "legendText")
+      .attr("x", 30)
+      .attr("y", 20)
+      .text("Exports");
   }
 
   gradientRect.attr("fill", "url(#gradient)");
 }
-
-function makeGraph(country){
+//
+function makeTimeline(){
 
 }
 
