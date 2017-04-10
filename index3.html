@@ -86,7 +86,10 @@ var pathGenerator = d3.geoPath().projection(projection);
 //color scales
 // var importColorScale = ["#ffffff", "#E3EEF4", "#C6DDE8", "#AACCDD", "#8EBBD2", "#5599BB", "#71AAC6", "#3988B0", "#1C77A4", "#006699"];
 // d3.scaleOrdinal().range(["#4DB6AC", "#48A7C8", "#2D8ED7", "#448AFF", "#22A3EA", "#00BCD4", "#01579b", "#0d4781"])
-var importColorScale = ["#ffffff", "#ECF5FE", "#C6E0FB", "#B3D5FA", "#A0CBF8", "#8DC0F7", "#79B6F6", "#66ABF4", "#53A1F3", "#4096F2"];
+// var importColorScale = ["#ffffff", "#ECF5FE", "#C6E0FB", "#B3D5FA", "#A0CBF8", "#8DC0F7", "#79B6F6", "#66ABF4", "#53A1F3", "#4096F2"];
+
+var importColorScale = ["#4096F2","#53A1F3","#66ABF4","#79B6F6","#8DC0F7","#A0CBF8","#B3D5FA", "#C6E0FB", "#ECF5FE", "#ffffff"];
+
 var exportColorScale = ["#FFFFFF", "#FCDBD9", "#F9B8B3", "#F8A6A0", "#F6948D", "#F5827A", "#F47167", "#F25F54", "#F14D41", "#EF3B2E"];
 
 //global scales, maps, and other stuff
@@ -194,7 +197,11 @@ function showImportMap(year){
 	.merge(paths)
   .attr("fill", function (country){
     var data = importMap.get(country.id);
-    if (data) { return importScale(data[yearInput]); }
+    if (data && yearInput != undefined){ 
+      return importScale(data[yearInput]); 
+    } else {
+      return "#888";
+    }
   })
   .attr("stroke", "#888")
   .attr("d", function (country) {
@@ -246,7 +253,11 @@ function showExportMap(year){
 	.merge(paths)
   .attr("fill", function (country){
     var data = exportMap.get(country.id);
-    if (data) { return exportScale(data[yearInput]); }
+    if (data && yearInput != undefined){ 
+      return exportScale(data[yearInput]); 
+    } else {
+      return "#888";
+    }
   })
   .attr("stroke", "#888")
   .attr("d", function (country) {
