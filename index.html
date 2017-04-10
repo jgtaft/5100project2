@@ -6,16 +6,51 @@
 <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
 
 <style>
-svg { border: solid #ccc 1px;}
-#yearSlider { width: 1000px; margin-left: 50px; }
-#legendText { text-anchor: middle; }
-button { text-align: center; color: white; padding: 15px 212px; font-size: 20; border:none; }
-#importButton { background-color: #006699; margin: 5px 5px 5px 50px; }
-#exportButton { background-color: #990000; margin: 5px 5px 5px 5px; }
-
+svg { 
+  border: solid #ccc 1px;
+}
+#yearSlider { 
+  width: 1000px; 
+  margin-left: 50px; 
+}
+#legendText { 
+  text-anchor: middle; 
+}
+button { 
+  text-align: center; 
+  color: white; 
+  padding: 15px 212px; 
+  font-size: 20; 
+  border:none; 
+  width: 5%;
+  height: 5%;
+  border-radius: 25px;
+  border-style: none;
+  color: white;
+}
+#importButton { 
+  background-color: #006699; 
+  margin: 5px 5px 5px 50px; 
+}
+#exportButton { 
+  background-color: #990000; 
+  margin: 5px 5px 5px 5px; 
+}
+#info{
+  float: right;
+  display: inline;
+}
+#date{
+  size: 100pt;
+  font-weight: bold;
+}
 </style>
 </head>
 <body>
+<div id="date">
+</div>
+<div id="info">
+</div>
 <svg id="map"></svg>
 <br/>
 <button type="button" id="importButton" onclick="showMap('imports', yearSlider.value)">Imports</button>
@@ -47,8 +82,10 @@ var projection = d3.geoRobinson();
 var pathGenerator = d3.geoPath().projection(projection);
 
 //color scales
-var importColorScale = ["#ffffff", "#E3EEF4", "#C6DDE8", "#AACCDD", "#8EBBD2", "#5599BB", "#71AAC6", "#3988B0", "#1C77A4", "#006699"];
-var exportColorScale = ["#FFFFFF", "#F4E3E3", "#E8C6C6", "#DDAAAA", "#D28E8E", "#C67171", "#BB5555", "#B03939", "#A41C1C", "#990000"]
+//var importColorScale = ["#ffffff", "#E3EEF4", "#C6DDE8", "#AACCDD", "#8EBBD2", "#5599BB", "#71AAC6", "#3988B0", "#1C77A4", "#006699"];
+//var exportColorScale = ["#FFFFFF", "#F4E3E3", "#E8C6C6", "#DDAAAA", "#D28E8E", "#C67171", "#BB5555", "#B03939", "#A41C1C", "#990000"]
+var importColorScale = ["#ffffff", "#ECF5FE", "#C6E0FB", "#B3D5FA", "#A0CBF8", "#8DC0F7", "#79B6F6", "#66ABF4", "#53A1F3", "#4096F2"];
+var exportColorScale = ["#FFFFFF", "#FCDBD9", "#F9B8B3", "#F8A6A0", "#F6948D", "#F5827A", "#F47167", "#F25F54", "#F14D41", "#EF3B2E"];
 
 //global scales, maps, and other stuff
 var importScale, exportScale, buttonSelection, importMapping, exportMapping;
@@ -88,7 +125,7 @@ var parseImports = function(row){
   row.ISO = Number(row.ISO);
   Object.values(row).forEach(function(value,index){
     if(index>1) {
-      value = +value;
+      value = +Math.log(value);
       importArr.push(value);
       if(value>maxImports){ maxImports = value; }
     }
@@ -103,7 +140,7 @@ var parseExports = function(row){
   row.ISO = Number(row.ISO);
   Object.values(row).forEach(function(value,index){
     if(index>1) {
-      value = +value;
+      value = +Math.log(value);
       exportArr.push(value);
       if(value>maxExports){ maxExports = value; }
     }
@@ -126,8 +163,11 @@ d3.queue()
     exportMap = d3.map(rawExports, function(country){ return country.ISO; });
 
     //scales are weird. What kind? What kind of min/max?
-    importScale = d3.scaleThreshold().domain(importArr).range(importColorScale);
-    exportScale = d3.scaleThreshold().domain(exportArr).range(exportColorScale);
+    //importScale = d3.scaleThreshold().domain(importArr).range(importColorScale);
+    //exportScale = d3.scaleThreshold().domain(exportArr).range(exportColorScale);
+    importScale = d3.scaleOrdinal().domain(importArr).range(importColorScale);
+    exportScale = d3.scaleOrdinal().domain(exportArr).range(exportColorScale);
+
 
     countries = topojson.feature(rawCountries, rawCountries.objects.countries);
 
@@ -161,13 +201,19 @@ function showMap(type, year){
   .attr("d", function (country) {
     return pathGenerator(country);
   })
-  .on("click", function(country){
+  .on("mouseover", function(country){
     if(type=="imports"){
       var data = importMap.get(country.id);
+      
+      document.getElementById("info").innerHTML = "Country: " + data.Country + "<br>" + "Year: " + year + "<br>" + "Import: $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.";
+
       console.log("In " + year + ", " + data.Country + " imported $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.")
     }
     if(type=="exports"){
       var data = exportMap.get(country.id);
+
+      document.getElementById("info").innerHTML = "Country: " + data.Country + "<br>" + "Year: " + year + "<br>" + "Exports: $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.";
+      
       console.log("In " + year + ", " + data.Country + " exported $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.")
 
     }
