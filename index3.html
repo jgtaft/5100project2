@@ -72,12 +72,11 @@ svg {
 
 var height = 500;
 var mapWidth = 1000;
-var width = 1000;
+var width = 1200;
 
 var map = d3.select("svg#map")
   .attr("width", width)
   .attr("height", height)
-  .attr("display", "inline")
   .attr("float", "left");
 
 var projection = d3.geoRobinson();
@@ -115,9 +114,9 @@ gradient.append("stop")
 
 var gradientRect = map.append("rect")
     .attr("width", 30)
-    .attr("height", 470)
-    .attr("x", 1020)
-    .attr("y", 30)
+    .attr("height", 400)
+    .attr("x", 1032)
+    .attr("y", 48)
     .attr("stroke", "#888");
 
 //labels that need to be refreshed every time a new button is clicked
@@ -228,7 +227,7 @@ function showImportMap(year){
   gradient.append("stop")
     .attr("id", "end")
     .attr("offset", "100%")
-    .attr("stop-color", "#006699");
+    .attr("stop-color", "#4096F2");
   gradientRect.attr("fill", "url(#gradient)");
 
 
@@ -236,8 +235,8 @@ function showImportMap(year){
   d3.select("#legendText").remove();
   legendLabels.append("text")
     .attr("id", "legendText")
-    .attr("x", 1030)
-    .attr("y", 20)
+    .attr("x", 1047)
+    .attr("y", 40)
     .text("Imports");
 
 }
@@ -276,14 +275,14 @@ function showExportMap(year){
   gradient.append("stop")
     .attr("id", "end")
     .attr("offset", "100%")
-    .attr("stop-color", "#990000");
+    .attr("stop-color", "#EF3B2E");
   gradientRect.attr("fill", "url(#gradient)");
 
   d3.select("#legendText").remove();
   legendLabels.append("text")
     .attr("id", "legendText")
-    .attr("x", 1030)
-    .attr("y", 20)
+    .attr("x", 1047)
+    .attr("y", 40)
     .text("Exports");
 }
 
