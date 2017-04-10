@@ -42,18 +42,19 @@ svg {
 #date{
   size: 100pt;
   font-weight: bold;
+  float: left;
 }
 
 </style>
 </head>
 <body>
 
-<div id="date">
-</div>
+
 <div id="info">
 </div>
 <svg id="map"></svg>
-
+<div id="date">
+</div>
 <input id="yearSlider" type="range" min="1960" max="2010" value="1960" oninput="show(buttonSelection, value)">
 
 <br/>
@@ -213,7 +214,7 @@ function showImportMap(year){
     console.log("In " + year + ", " + data.Country + " imported $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.")
   })
 
-  document.getElementById("date").innerHTML = "Year: " + year;
+  document.getElementById("date").innerHTML = "Year: " + year + " ";
 
   // .on("input", function(country){
   //   var data = importMap.get(country.id);
@@ -269,7 +270,7 @@ function showExportMap(year){
     console.log("In " + year + ", " + data.Country + " exported $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.")
   })
 
-  document.getElementById("date").innerHTML = "Year: " + year;
+  document.getElementById("date").innerHTML = "Year: " + year + " ";
   
   d3.select("#end").remove();
   gradient.append("stop")
