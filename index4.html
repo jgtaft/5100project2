@@ -9,6 +9,9 @@
 svg {
   border: solid #ccc 1px;
 }
+#map{
+  position:relative;
+}
 
 #yearSlider {
   width: 1000px;
@@ -44,7 +47,7 @@ svg {
   font-weight: bold;
 }
 #tooltip{
-  z-index: 10000;
+  position: absolute;
 }
 
 </style>
@@ -153,23 +156,18 @@ d3.queue()
 //tooltip stuff
 var tip = map.append("g")
   .attr("class", "tooltip")
-  // .attr("z-index", 1000)
+  .attr("z-index", 1000)
   .style("display", "none");
 
 function tipIn(country){
   tip.style("display", null);
 
-  // tip.append("rect")
-  //   .attr("width", 30)
-  //   .attr("height", 20)
-  //   .attr("fill", "grey")
-  //   .style("opacity", 0.6);
-
   tip.select("#tiptext").remove();
 
   tip.append("text")
     .attr("id", "tiptext")
-    .attr("x", 15)
+    .attr("x", 20)
+    .attr("y", -10)
     .attr("text-anchor", "middle")
     .text("" + country);
 }
@@ -179,8 +177,8 @@ function tipOut(){
 }
 
 function tipMove(){
-  var x = d3.mouse(this)[0];
-  var y = d3.mouse(this)[1];
+  var x = d3.mouse(this)[0]-10;
+  var y = d3.mouse(this)[1]-10;
   tip.attr("transform", "translate(" + x + "," + y + ")");
 }
 
@@ -213,10 +211,11 @@ function showMap(type, year){
   .attr("d", function (country) {
     return pathGenerator(country);
   })
+  .on("mouseout", tipOut)
+  .on("mousemove", tipMove)
   .on("mouseover", function(country){
     var importData = importMap.get(country.id);
-    // var exportData = exportMap.get(country.id);
-    tipIn(importData.Country)
+    tipIn(importData.Country);
     // if(type=="imports"){
     //   var data = importMap.get(country.id);
     //   tipIn(data.Country);
@@ -227,9 +226,7 @@ function showMap(type, year){
     //   tipIn(data.Country);
     //   document.getElementById("info").innerHTML = "Country: " + exportData.Country + "<br>" + "Year: " + year + "<br>" + "Export: $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.";
     // }
-  })
-  .on("mouseout", tipOut)
-  .on("mousemove", tipMove);
+  });
 
   document.getElementById("date").innerHTML = "Year: " + year;
 
