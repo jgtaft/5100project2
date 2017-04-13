@@ -1,0 +1,231 @@
+<html>
+<head>
+<title>P2</title>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="http://d3js.org/topojson.v2.min.js"></script>
+<script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+
+<style>
+svg {
+  border: solid #ccc 1px;
+}
+
+#yearSlider {
+  width: 1000px;
+}
+
+#legendText {
+  text-anchor: middle;
+}
+
+#button1{
+  width: 20%;
+  height: 5%;
+  background-color: #4096F2;
+  /*border-radius: 25px;*/
+  border-style: none;
+  color: white;
+}
+
+#button2{
+  width: 20%;
+  height: 5%;
+  background-color: #EF3B2E;
+  /*border-radius: 25px;*/
+  border-style: none;
+  color: white;
+}
+#info{
+  float: right;
+  display: inline;
+}
+#date{
+  size: 100pt;
+  font-weight: bold;
+}
+
+</style>
+</head>
+<body>
+
+<div id="info"></div>
+<svg id="map"></svg>
+<div id="date"></div>
+
+<input id="yearSlider" type="range" min="1989" max="2008" value="1989" oninput="showMap(buttonSelection, value)">
+
+<br/>
+
+<button type="button" id="button1" onclick="showMap('total', yearSlider.value)">Total Armed Forces</button>
+<button type="button" id="button2" onclick="showMap('percent', yearSlider.value)">Armed Forces, %Labor Force</button>
+
+<script>
+
+var height = 500;
+var mapWidth = 1000;
+var width = 1000;
+
+var map = d3.select("svg#map")
+  .attr("width", width)
+  .attr("height", height)
+  .attr("display", "inline")
+  .attr("float", "left");
+
+var projection = d3.geoRobinson();
+var pathGenerator = d3.geoPath().projection(projection);
+
+//color scales
+// var importColorScale = ["#ffffff", "#E3EEF4", "#C6DDE8", "#AACCDD", "#8EBBD2", "#5599BB", "#71AAC6", "#3988B0", "#1C77A4", "#006699"];
+// d3.scaleOrdinal().range(["#4DB6AC", "#48A7C8", "#2D8ED7", "#448AFF", "#22A3EA", "#00BCD4", "#01579b", "#0d4781"])
+var totalColorScale = ["#ffffff", "#ECF5FE", "#C6E0FB", "#B3D5FA", "#A0CBF8", "#8DC0F7", "#79B6F6", "#66ABF4", "#53A1F3", "#4096F2"];
+var percentColorScale = ["#FFFFFF", "#FCDBD9", "#F9B8B3", "#F8A6A0", "#F6948D", "#F5827A", "#F47167", "#F25F54", "#F14D41", "#EF3B2E"];
+
+//global scales, maps, and other stuff
+var totalScale, percentScale, buttonSelection, totalMapping, percentMapping;
+
+//get ready for sidebar gradient. code from: https://bl.ocks.org/mbostock/1086421
+var gradient = map.append("defs")
+.append("linearGradient")
+  .attr("id", "gradient")
+  .attr("x1", "50%")
+  .attr("y1", "0%")
+  .attr("x2", "50%")
+  .attr("y2", "100%")
+  .attr("spreadMethod", "pad");
+
+gradient.append("stop")
+  .attr("offset", "0%")
+  .attr("stop-color", "#fff");
+
+gradient.append("stop")
+  .attr("id", "end")
+  .attr("offset", "100%");
+
+var gradientRect = map.append("rect")
+    .attr("width", 30)
+    .attr("height", 400)
+    .attr("x", 20)
+    .attr("y", 48)
+    .attr("stroke", "#888");
+
+//labels that need to be refreshed every time a new button is clicked
+var legendLabels = map.append("g");
+
+legendLabels.append("text")
+  .attr("x", 55)
+  .attr("y", 55)
+  .text("0");
+
+legendLabels.append("text")
+  .attr("id", "endLabel")
+  .attr("x", 55)
+  .attr("y", 440);
+
+//parse functions check every value and update the maximum for imports
+var maxTotal = 0;
+var totalArr = [];
+var parseTotal = function(row){
+  row.ISO = Number(row.ISO);
+  Object.values(row).forEach(function(value,index){
+    if(index<20) {
+      value = Math.log(Number(value));
+      totalArr.push(value);
+      if(value>maxTotal){ maxTotal = value; }
+    }
+  })
+
+  return row;
+}
+//and the same for exports
+var maxPercent = 0;
+var percentArr = [];
+var parsePercent = function(row){
+  row.ISO = Number(row.ISO);
+  Object.values(row).forEach(function(value,index){
+    if(index<20) {
+      value = Math.log(Number(value));
+      percentArr.push(value);
+      if(value>maxPercent){ maxPercent = value; }
+    }
+  })
+  return row;
+}
+
+d3.queue()
+  .defer(d3.json, "world-110m.json")
+  .defer(d3.csv, "forcesTotal.csv", parseTotal)
+  .defer(d3.csv, "forcesPercent.csv", parsePercent)
+  .await(function(error, rawCountries, rawTotal, rawPercent){
+    console.log(rawPercent)
+    console.log(rawTotal)
+
+    totalMap = d3.map(rawTotal, function(country){ return country.ISO; });
+    percentMap = d3.map(rawPercent, function(country){ return country.ISO; });
+
+    //scales are weird. What kind? What kind of min/max?
+    totalScale = d3.scaleQuantize().domain([0, maxTotal]).range(totalColorScale);
+    percentScale = d3.scaleQuantize().domain([0, maxPercent]).range(percentColorScale);
+
+    countries = topojson.feature(rawCountries, rawCountries.objects.countries);
+
+    //initialize to total armed forces in 1989.
+    showMap("total", 1989);
+  });
+
+function showMap(type, year){
+  //set buttonselection to imports and yearinput to access csv variables
+  buttonSelection = type;
+
+  projection.fitExtent([[0,0], [mapWidth, height]], countries);
+	pathGenerator = d3.geoPath().projection(projection);
+
+  //make and fill map
+	var paths = map.selectAll("path").data(countries.features);
+	paths.enter().append("path").attr("class", "country")
+	.merge(paths)
+  .attr("fill", function (country){
+    if(type=="total"){
+      var data = totalMap.get(country.id);
+      return data ? totalScale(data[year]) : "#888";
+    } else if(type=="percent"){
+      var data = percentMap.get(country.id);
+      return data ? percentScale(data[year]) : "#888";
+    }
+  })
+  .attr("stroke", "#888")
+  .attr("d", function (country) {
+    return pathGenerator(country);
+  })
+  .on("mouseover", function(country){
+    var data = type=="total" ? totalMap.get(country.id) : percentMap.get(country.id);
+    document.getElementById("info").innerHTML = "Country: " + data.Country + "<br>" + "Year: " + year + "<br>" + type + ": " + data[year];
+  })
+
+  document.getElementById("date").innerHTML = "Year: " + year + " ";
+
+  d3.select("#end").remove();
+  gradient.append("stop")
+    .attr("id", "end")
+    .attr("offset", "100%");
+  gradientRect.attr("fill", "url(#gradient)");
+
+  d3.select("#legendText").remove();
+  legendLabels.append("text")
+    .attr("id", "legendText")
+    .attr("x", 35)
+    .attr("y", 40);
+
+  if(type=="total"){
+    d3.select("#end").attr("stop-color", "#4096F2");
+    d3.select("#legendText").text("Number");
+    d3.select("#endLabel").text(Math.round(Math.exp(maxTotal) * 100)/100);
+  }else{
+    d3.select("#end").attr("stop-color", "#EF3B2E");
+    d3.select("#legendText").text("Percent");
+    d3.select("#endLabel").text(Math.round(Math.exp(maxPercent) * 100)/100);
+  }
+}
+
+</script>
+</body>
+</html>
