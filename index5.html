@@ -4,10 +4,11 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="http://d3js.org/topojson.v2.min.js"></script>
 <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+<link href="https://fonts.googleapis.com/css?family=Oxygen" rel="stylesheet">
 
 <style>
-svg {
-  border: solid #ccc 1px;
+body {
+  font-family: 'Oxygen', sans-serif;
 }
 
 #yearSlider {
@@ -22,7 +23,6 @@ svg {
   width: 20%;
   height: 5%;
   background-color: #4096F2;
-  /*border-radius: 25px;*/
   border-style: none;
   color: white;
 }
@@ -31,10 +31,10 @@ svg {
   width: 20%;
   height: 5%;
   background-color: #EF3B2E;
-  /*border-radius: 25px;*/
   border-style: none;
   color: white;
 }
+
 #info{
   float: right;
   display: inline;
@@ -47,6 +47,10 @@ svg {
 </style>
 </head>
 <body>
+<h2>The World's Armed Forces, 1989-2008</h2>
+<p>Move the slider to see how the size of each country's military changes over time.<br/>
+  Click the buttons below the map to switch between the absolute and relative military sizes.<br/>
+  Click on a country to learn more about it. </p>
 
 <div id="info"></div>
 <svg id="map"></svg>
@@ -63,7 +67,7 @@ svg {
 
 var height = 500;
 var mapWidth = 1000;
-var width = 1000;
+var width = 1300;
 
 var map = d3.select("svg#map")
   .attr("width", width)
@@ -109,17 +113,18 @@ var gradientRect = map.append("rect")
     .attr("stroke", "#888");
 
 //labels that need to be refreshed every time a new button is clicked
-var legendLabels = map.append("g");
+var legendLabels = map.append("g")
+  .attr("id", "legend");
 
 legendLabels.append("text")
   .attr("x", 55)
-  .attr("y", 55)
+  .attr("y", 60)
   .text("0");
 
 legendLabels.append("text")
   .attr("id", "endLabel")
   .attr("x", 55)
-  .attr("y", 440);
+  .attr("y", 445);
 
 //parse functions check every value and update the maximum for imports
 var maxTotal = 0;
@@ -151,10 +156,22 @@ var parsePercent = function(row){
   return row;
 }
 
+var parseRow = function(row){
+  row.ISO = Number(row.ISO);
+  Object.values(row).forEach(function(value, index){
+    if(index>1){
+      value = +value;
+    }
+  })
+  return row;
+}
+
 d3.queue()
   .defer(d3.json, "world-110m.json")
   .defer(d3.csv, "forcesTotal.csv", parseTotal)
   .defer(d3.csv, "forcesPercent.csv", parsePercent)
+  .defer(d3.csv, "imports.csv", parseRow)
+  .defer(d3.csv, "exports.csv", parseRow)
   .await(function(error, rawCountries, rawTotal, rawPercent){
     console.log(rawPercent)
     console.log(rawTotal)
@@ -163,7 +180,9 @@ d3.queue()
     percentMap = d3.map(rawPercent, function(country){ return country.ISO; });
 
     //scales are weird. What kind? What kind of min/max?
+    //this does not work well as log then quantize. not sure why
     totalScale = d3.scaleQuantize().domain([0, maxTotal]).range(totalColorScale);
+    //this works well as log and then quantize.
     percentScale = d3.scaleQuantize().domain([0, maxPercent]).range(percentColorScale);
 
     countries = topojson.feature(rawCountries, rawCountries.objects.countries);
@@ -173,7 +192,7 @@ d3.queue()
   });
 
 function showMap(type, year){
-  //set buttonselection to imports and yearinput to access csv variables
+  map.selectAll("#popup").remove();
   buttonSelection = type;
 
   projection.fitExtent([[0,0], [mapWidth, height]], countries);
@@ -200,6 +219,12 @@ function showMap(type, year){
     var data = type=="total" ? totalMap.get(country.id) : percentMap.get(country.id);
     document.getElementById("info").innerHTML = "Country: " + data.Country + "<br>" + "Year: " + year + "<br>" + type + ": " + data[year];
   })
+  .on("click", function(country){
+    var totalData = totalMap.get(country.id);
+    var percentData = percentMap.get(country.id);
+    showInfo(year, totalData[year], percentData[year], percentData.Country, d3.mouse(this));
+  })
+  .transition().attr("duration", 200);//this isnt working for some reason
 
   document.getElementById("date").innerHTML = "Year: " + year + " ";
 
@@ -223,6 +248,49 @@ function showMap(type, year){
     d3.select("#end").attr("stop-color", "#EF3B2E");
     d3.select("#legendText").text("Percent");
     d3.select("#endLabel").text(Math.round(Math.exp(maxPercent) * 100)/100);
+  }
+}
+
+function showInfo(year, total, percent, country, coords){
+  var x = coords[0];
+  var y = coords[1];
+
+  map.selectAll("#popup").remove();
+  var popup = map.append("g")
+    .attr("id", "popup");
+
+  popup.append("path")
+    .attr("x", x)
+    .attr("y", y)
+    .attr("d", "m " + x + " " + y + " l 25 -50 v 100 z")
+    .attr("fill", "#d6d6d6");
+
+  popup.append("rect")
+    .attr("height", 100)
+    .attr("width", 260)
+    .attr("x", x + 25)
+    .attr("y", y - 50)
+    .attr("fill", "#d6d6d6");
+
+  popup.append("text")
+    .attr("id", "name")
+    .attr("x", x + 30)
+    .attr("y", y - 30)
+    .text(country);
+
+  if(total=="" || percent ==""){
+    popup.append("text")
+      .attr("x", x + 30)
+      .attr("y", y - 5)
+      .text("No data for " + country + " in " + year + ".")
+  }else{
+    var lines = ["In " + year + ", " + country + " had "+ total, " people in its armed forces,", "or " + Math.round(percent*10)/10 + "% of its labor force."]
+    for(var i=0; i< lines.length; i++){
+      popup.append("text")
+        .attr("x", x + 30)
+        .attr("y", y -5 + (20*i))
+        .text(lines[i]);
+    }
   }
 }
 
