@@ -6,10 +6,15 @@
 <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
 
 <style>
-svg { 
-  border: solid #ccc 1px;
+#map{ 
+  display: block;
+  margin: auto;
+  width: 100%;
 }
 
+html{
+  font-family: sans-serif;
+}
 #yearSlider { 
   width: 1000px; 
 }
@@ -40,9 +45,9 @@ svg {
   display: inline;
 }
 #date{
-  size: 100pt;
   font-weight: bold;
-  float: left;
+  font-size: 20pt;
+  padding: 0px 0px 0px 0px;
 }
 
 </style>
@@ -52,9 +57,9 @@ svg {
 
 <div id="info">
 </div>
+<p id="date">
+</p>
 <svg id="map"></svg>
-<div id="date">
-</div>
 <input id="yearSlider" type="range" min="1960" max="2010" value="1960" oninput="show(buttonSelection, value)">
 
 <br/>
@@ -77,8 +82,7 @@ var width = 1200;
 
 var map = d3.select("svg#map")
   .attr("width", width)
-  .attr("height", height)
-  .attr("float", "left");
+  .attr("height", height);
 
 var projection = d3.geoRobinson();
 var pathGenerator = d3.geoPath().projection(projection);
@@ -132,7 +136,9 @@ var parseImports = function(row){
     if(index>1) {
       value = +Math.log(value);
       importArr.push(value);
-      if(value>maxImports){ maxImports = value; }
+      if(value>maxImports){ 
+        maxImports = value; 
+      }
     }
   })
   return row;
@@ -159,8 +165,12 @@ d3.queue()
   .defer(d3.csv, "exports.csv", parseExports)
   .await(function(error, rawCountries, rawImports, rawExports){
 
-    importMap = d3.map(rawImports, function(country){ return country.ISO; });
-    exportMap = d3.map(rawExports, function(country){ return country.ISO; });
+    importMap = d3.map(rawImports, function(country){ 
+      return country.ISO; 
+    });
+    exportMap = d3.map(rawExports, function(country){ 
+      return country.ISO; 
+    });
 
     //scales are weird. What kind? What kind of min/max?
     //var impMax = d3.max(rawImports, function(d){ return d.yr1960; });
@@ -197,7 +207,9 @@ function showImportMap(year){
 	.merge(paths)
   .attr("fill", function (country){
     var data = importMap.get(country.id);
-    if (data && yearInput != undefined){ 
+    console.log(data)
+    console.log(yearInput)
+    if (data && yearInput != undefined && yearInput != null){ 
       return importScale(data[yearInput]); 
     } else {
       return "#888";
@@ -214,7 +226,7 @@ function showImportMap(year){
     console.log("In " + year + ", " + data.Country + " imported $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.")
   })
 
-  document.getElementById("date").innerHTML = "Year: " + year + " ";
+  document.getElementById("date").innerHTML = year + " ";
 
   // .on("input", function(country){
   //   var data = importMap.get(country.id);
@@ -253,7 +265,7 @@ function showExportMap(year){
 	.merge(paths)
   .attr("fill", function (country){
     var data = exportMap.get(country.id);
-    if (data && yearInput != undefined){ 
+    if (data && yearInput != undefined && yearInput != null){ 
       return exportScale(data[yearInput]); 
     } else {
       return "#888";
@@ -270,7 +282,7 @@ function showExportMap(year){
     console.log("In " + year + ", " + data.Country + " exported $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.")
   })
 
-  document.getElementById("date").innerHTML = "Year: " + year + " ";
+  document.getElementById("date").innerHTML = year + " ";
   
   d3.select("#end").remove();
   gradient.append("stop")
