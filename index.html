@@ -4,157 +4,204 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="http://d3js.org/topojson.v2.min.js"></script>
 <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+<link href="https://fonts.googleapis.com/css?family=Oxygen" rel="stylesheet">
 
 <style>
-svg { border: solid #ccc 1px;}
-#yearSlider { width: 1000px; margin-left: 50px; }
-#legendText { text-anchor: middle; }
-button { text-align: center; color: white; padding: 15px 212px; font-size: 20; border:none; }
-#importButton { background-color: #006699; margin: 5px 5px 5px 50px; }
-#exportButton { background-color: #990000; margin: 5px 5px 5px 5px; }
+body {
+  font-family: 'Oxygen', sans-serif;
+  text-align: center;
+}
+#yearSlider {
+  width: 1000px;
+}
+#legendText {
+  text-anchor: middle;
+}
+#makemap{
+  width: 30%;
+  height: 5%;
+  background-color: grey;
+  border-style: none;
+  color: white;
+}
+#date{
+  size: 100pt;
+  font-weight: bold;
+}
+#scales{
+  margin: 5 5 5 5;
+  float:left;
+  text-align: left;
+}
+#types{
+  margin: 5 5 5 5;
+  float:left;
+  text-align: left;
+}
+svg{
+  margin:auto;
+  clear:both;
+}
+.tick{
+  font-size: 15pt;
+  stroke-width: 4;
+}
+.domain{
+  stroke-width: 4;
+}
+#button1{
+  width: 20%;
+  height: 5%;
+  background-color: #4096F2;
+  border-style: none;
+  color: white;
+}
+#button2{
+width: 20%;
+height: 5%;
+background-color: #EF3B2E;
+border-style: none;
+color: white;
+}
 
 </style>
 </head>
 <body>
+<h2>The World's Armed Forces, 1989-2008</h2>
+<p>Choose your data and scale types, and then click the button to make your map.<br/>
+  Move the slider to see how the size of each country's military changes over time.<br/>
+  Click on a country to learn more about it. </p>
+<div id="radios">
+<div id="scales">
+Pick a scale type:<br/>
+<input type="radio" value="standard" name="scale" checked="checked">Standard Scale</input><br/>
+<input type="radio" value="log" name="scale">Log Scale</input></div>
+<div id="types">
+Pick a data type:<br/>
+<input type="radio" value="total" name="type" checked="checked">Total Armed Forces</input><br/>
+<input type="radio" value="percent" name="type">Armed Forces as % of Labor Force</input>
+</div>
+</div>
+<br/>
+<br/>
+<br/>
+<br/>
+<button type="button" id="makemap" onclick="chooseMap(yearSlider.value)">Make me a map!</button>
 <svg id="map"></svg>
-<br/>
-<button type="button" id="importButton" onclick="showMap('imports', yearSlider.value)">Imports</button>
-<button type="button" id="exportButton" onclick="showMap('exports', yearSlider.value)">Exports</button>
-<br/>
-<input id="yearSlider" type="range" min="1960" max="2010" value="1960" oninput="showMap(buttonSelection, value)">
-<svg id="slider" height="30" width="1050"></svg>
-<br/>
-<svg id="timeline" height="500" width="1000"></svg>
+<div id="date"></div>
 
-<h2>To think about</h2>
-<ul>
-  <li> What kind of scale? </li>
-  <li> Is there a difference between no data and zero imports/exports?</li>
-  <li> Should the scale reflect the min/max number for that year, or the min/max number for the whole dataset?</li>
-  <li>If using the wars data, what gets to count as a war? <a href="http://www.warscholar.org/1975.html">There are so many.</a></li>
-</ul>
+<input id="yearSlider" type="range" min="1989" max="2008" value="1989" oninput="chooseMap(value)">
+
+<br/>
 
 <script>
 var height = 500;
-var mapWidth = 1050;
-var width = 1500
-
+var mapWidth = 1000;
+var width = 1300;
 var map = d3.select("svg#map")
-  .attr("width", mapWidth)
-  .attr("height", height);
-
+  .attr("width", width)
+  .attr("height", height)
+  .attr("display", "inline")
+  .attr("float", "left");
 var projection = d3.geoRobinson();
 var pathGenerator = d3.geoPath().projection(projection);
-
 //color scales
-var importColorScale = ["#ffffff", "#E3EEF4", "#C6DDE8", "#AACCDD", "#8EBBD2", "#5599BB", "#71AAC6", "#3988B0", "#1C77A4", "#006699"];
-var exportColorScale = ["#FFFFFF", "#F4E3E3", "#E8C6C6", "#DDAAAA", "#D28E8E", "#C67171", "#BB5555", "#B03939", "#A41C1C", "#990000"]
+// var importColorScale = ["#ffffff", "#E3EEF4", "#C6DDE8", "#AACCDD", "#8EBBD2", "#5599BB", "#71AAC6", "#3988B0", "#1C77A4", "#006699"];
+// d3.scaleOrdinal().range(["#4DB6AC", "#48A7C8", "#2D8ED7", "#448AFF", "#22A3EA", "#00BCD4", "#01579b", "#0d4781"])
+var totalColorScale = ["#ffffff", "#ECF5FE", "#C6E0FB", "#B3D5FA", "#A0CBF8", "#8DC0F7", "#79B6F6", "#66ABF4", "#53A1F3", "#4096F2"];
+var percentColorScale = ["#FFFFFF", "#FCDBD9", "#F9B8B3", "#F8A6A0", "#F6948D", "#F5827A", "#F47167", "#F25F54", "#F14D41", "#EF3B2E"];
+//global scales
+var totalStandard, percentStandard, totalLog, percentLog;
+//global radio button state variables
+var scale, type;
 
-//global scales, maps, and other stuff
-var importScale, exportScale, buttonSelection, importMapping, exportMapping;
-
-//get ready for sidebar gradient. code from: https://bl.ocks.org/mbostock/1086421
-var gradient = map.append("defs")
-.append("linearGradient")
-  .attr("id", "gradient")
-  .attr("x1", "50%")
-  .attr("y1", "0%")
-  .attr("x2", "50%")
-  .attr("y2", "100%")
-  .attr("spreadMethod", "pad");
-
-gradient.append("stop")
-  .attr("offset", "0%")
-  .attr("stop-color", "#fff");
-
-gradient.append("stop")
-  .attr("id", "end")
-  .attr("offset", "100%");
-
-var gradientRect = map.append("rect")
-    .attr("width", 30)
-    .attr("height", 470)
-    .attr("x", 20)
-    .attr("y", 30)
-    .attr("stroke", "#888");
-
-//labels that need to be refreshed every time a new button is clicked
-var legendLabels = map.append("g");
-
-//parse functions check every value and update the maximum for imports
-var maxImports = 0;
-var importArr = [];
-var parseImports = function(row){
+//parse functions check every value and update the maximum for each
+var maxTotal = 0;
+var totalArr = [];
+var parseTotal = function(row){
   row.ISO = Number(row.ISO);
   Object.values(row).forEach(function(value,index){
-    if(index>1) {
-      value = +value;
-      importArr.push(value);
-      if(value>maxImports){ maxImports = value; }
+    if(index<20) {
+      value = Number(value);
+      totalArr.push(value);
+      if(value>maxTotal){ maxTotal = value; }
     }
   })
   return row;
 }
-
 //and the same for exports
-var maxExports = 0;
-var exportArr = [];
-var parseExports = function(row){
+var maxPercent = 0;
+var percentArr = [];
+var parsePercent = function(row){
   row.ISO = Number(row.ISO);
   Object.values(row).forEach(function(value,index){
-    if(index>1) {
-      value = +value;
-      exportArr.push(value);
-      if(value>maxExports){ maxExports = value; }
+    if(index<20) {
+      value = Number(value);
+      percentArr.push(value);
+      if(value>maxPercent){ maxPercent = value; }
     }
   })
   return row;
-}
-var parseWars = function(row){
-  row.Start = Number(row.Start);
-  row.End = Number(row.Start);
 }
 
 d3.queue()
   .defer(d3.json, "world-110m.json")
-  .defer(d3.csv, "imports.csv", parseImports)
-  .defer(d3.csv, "exports.csv", parseExports)
-  .defer(d3.csv, "wars.csv", parseWars)
-  .await(function(error, rawCountries, rawImports, rawExports){
+  .defer(d3.csv, "forcesTotal.csv", parseTotal)
+  .defer(d3.csv, "forcesPercent.csv", parsePercent)
+  .await(function(error, rawCountries, rawTotal, rawPercent){
+    totalMap = d3.map(rawTotal, function(country){ return country.ISO; });
+    percentMap = d3.map(rawPercent, function(country){ return country.ISO; });
 
-    importMap = d3.map(rawImports, function(country){ return country.ISO; });
-    exportMap = d3.map(rawExports, function(country){ return country.ISO; });
-
-    //scales are weird. What kind? What kind of min/max?
-    importScale = d3.scaleThreshold().domain(importArr).range(importColorScale);
-    exportScale = d3.scaleThreshold().domain(exportArr).range(exportColorScale);
+    //scale options
+    totalStandard = d3.scaleQuantize().domain([0, maxTotal]).range(totalColorScale);
+    percentStandard = d3.scaleQuantize().domain([0, maxPercent]).range(percentColorScale);
+    totalLog = d3.scaleQuantize().domain([0, Math.log(maxTotal)]).range(totalColorScale);
+    percentLog = d3.scaleQuantize().domain([0, Math.log(maxPercent)]).range(percentColorScale);
 
     countries = topojson.feature(rawCountries, rawCountries.objects.countries);
-
-    //initialize to imports in 1960.
-    showMap("imports", 1960);
   });
 
-function showMap(type, year){
-  buttonSelection = type;
-  //set buttonselection to imports and yearinput to access csv variables
-  var yearInput = "yr" + year;
+function chooseMap(year){
+  var scaleSelect = document.getElementsByName("scale");
+  for (var i=0; i<scaleSelect.length; i++){
+    if (scaleSelect[i].checked){
+      scale = scaleSelect[i].value;
+    }
+  }
+  var typeSelect = document.getElementsByName("type");
+  for (var i=0; i<typeSelect.length; i++){
+    if (typeSelect[i].checked){
+      type = typeSelect[i].value;
+    }
+  }
 
-  projection.fitExtent([[50,0], [mapWidth, height]], countries);
-	pathGenerator = d3.geoPath().projection(projection);
+  showMap(scale, type, year)
+}
+
+function showMap(scale, type, year){
+  map.selectAll("#popup").remove();
 
   //make and fill map
+  projection.fitExtent([[0,0], [mapWidth, height]], countries);
+	pathGenerator = d3.geoPath().projection(projection);
 	var paths = map.selectAll("path").data(countries.features);
 	paths.enter().append("path").attr("class", "country")
 	.merge(paths)
   .attr("fill", function (country){
-    if(type=="imports"){
-      var data = importMap.get(country.id);
-      if (data) { return importScale(data[yearInput]); }
-    }
-    if(type=="exports"){
-      var data = exportMap.get(country.id);
-      if (data) { return exportScale(data[yearInput]); }
+    if(type=="total"){
+      var data = totalMap.get(country.id);
+      if(scale=="log"){
+        return data ? totalLog(Math.log(data[year])) : "#888";
+      }else if(scale=="standard"){
+        return data ? totalStandard(data[year]) : "#888";
+      }
+    } else if(type=="percent"){
+      var data = percentMap.get(country.id);
+      if(scale=="log"){
+        return data ? percentLog(Math.log(data[year])) : "#888";
+      }else if(scale=="standard"){
+        return data ? percentStandard(data[year]) : "#888";
+      }
     }
   })
   .attr("stroke", "#888")
@@ -162,52 +209,361 @@ function showMap(type, year){
     return pathGenerator(country);
   })
   .on("click", function(country){
-    if(type=="imports"){
-      var data = importMap.get(country.id);
-      console.log("In " + year + ", " + data.Country + " imported $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.")
-    }
-    if(type=="exports"){
-      var data = exportMap.get(country.id);
-      console.log("In " + year + ", " + data.Country + " exported $" + Math.round(data[yearInput] * 100)/100 + " worth of arms.")
+    var totalData = totalMap.get(country.id);
+    var percentData = percentMap.get(country.id);
+    showInfo(year, totalData[year], percentData[year], percentData.Country, d3.mouse(this));
+  })
+  .transition().attr("duration", 200);//this isnt working for some reason
 
-    }
-  });
+  showGradient(scale, type);
+  document.getElementById("date").innerHTML = "Year: " + year + " ";
+}
 
-  //remove the previous legend info, otherwise it gets overwritten and obscured
-  d3.select("#legendText").remove();
+function showGradient(scale){
+  d3.select("#gradient").remove();
+  d3.select("#legend").remove();
 
+  //add sidebar gradient. code from: https://bl.ocks.org/mbostock/1086421
+  var gradient = map.append("defs")
+  .append("linearGradient")
+    .attr("id", "gradient")
+    .attr("x1", "50%")
+    .attr("y1", "0%")
+    .attr("x2", "50%")
+    .attr("y2", "100%")
+    .attr("spreadMethod", "pad");
 
-  //remove old gradient color and add new one
-  d3.select("#end").remove();
-  if(type=="imports"){
-    gradient.append("stop")
-      .attr("id", "end")
-      .attr("offset", "100%")
-      .attr("stop-color", "#006699");
-    legendLabels.append("text")
-      .attr("id", "legendText")
-      .attr("x", 30)
-      .attr("y", 20)
-      .text("Imports");
-  }
+  gradient.append("stop")
+    .attr("offset", "100%")
+    .attr("stop-color", "#fff");
 
-  if(type=="exports"){
-    gradient.append("stop")
-      .attr("id", "end")
-      .attr("offset", "100%")
-      .attr("stop-color", "#990000");
-    legendLabels.append("text")
-      .attr("id", "legendText")
-      .attr("x", 30)
-      .attr("y", 20)
-      .text("Exports");
+  gradient.append("stop")
+    .attr("id", "end")
+    .attr("offset", "0%");
+
+  var gradientRect = map.append("rect")
+      .attr("width", 30)
+      .attr("height", 400)
+      .attr("x", 20)
+      .attr("y", 48)
+      .attr("stroke", "#888");
+
+  //labels that need to be refreshed every time a new button is clicked
+  var legendLabels = map.append("g")
+    .attr("id", "legend");
+
+  legendLabels.append("text")
+    .attr("id", "legendText")
+    .attr("x", 35)
+    .attr("y", 40);
+  legendLabels.append("text")
+    .attr("x", 55)
+    .attr("y", 60)
+    .text("0");
+  legendLabels.append("text")
+    .attr("id", "endLabel")
+    .attr("x", 55)
+    .attr("y", 445);
+
+  if(type=="total"){
+    d3.select("#end").attr("stop-color", "#4096F2")
+    d3.select("#legendText").text("Number");
+    d3.select("#endLabel").text(Math.round(maxTotal * 100)/100);
+  }else{
+    d3.select("#end").attr("stop-color", "#EF3B2E");
+    d3.select("#legendText").text("Percent");
+    d3.select("#endLabel").text(Math.round(maxPercent * 100)/100 + "%");
   }
 
   gradientRect.attr("fill", "url(#gradient)");
-}
-//
-function makeTimeline(){
 
+}
+
+function showInfo(year, total, percent, country, coords){
+  var x = coords[0];
+  var y = coords[1];
+  map.selectAll("#popup").remove();
+  var popup = map.append("g")
+    .attr("id", "popup");
+  popup.append("path")
+    .attr("x", x)
+    .attr("y", y)
+    .attr("d", "m " + x + " " + y + " l 25 -50 v 100 z")
+    .attr("fill", "#d6d6d6");
+  popup.append("rect")
+    .attr("height", 100)
+    .attr("width", 260)
+    .attr("x", x + 25)
+    .attr("y", y - 50)
+    .attr("fill", "#d6d6d6");
+  popup.append("text")
+    .attr("id", "name")
+    .attr("x", x + 30)
+    .attr("y", y - 30)
+    .text(country);
+  if(total=="" || percent ==""){
+    popup.append("text")
+      .attr("x", x + 30)
+      .attr("y", y - 5)
+      .text("No data for " + country + " in " + year + ".")
+  }else{
+    var lines = ["In " + year + ", " + country + " had "+ total, " people in its armed forces,", "or " + Math.round(percent*10)/10 + "% of its labor force."]
+    for(var i=0; i< lines.length; i++){
+      popup.append("text")
+        .attr("x", x + 30)
+        .attr("y", y -5 + (20*i))
+        .text(lines[i]);
+    }
+  }
+}
+</script>
+
+<svg width="1500" height="1000"></svg>
+</svg>
+<br>
+<button type="button" id="button1" onclick="showGraph('normal')">Military Expenditure Normal Scale</button>
+<button type="button" id="button2" onclick="showGraph('log')">Military Expenditure Log Scale</button>
+<script>
+
+var buttonSelect;
+
+var svg = d3.select("svg"),
+    margin = {top: 20, right: 20, bottom: 30, left: 60},
+    width = +svg.attr("width") - margin.left - margin.right,
+    height = +svg.attr("height") - margin.top - margin.bottom,
+    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var x0 = d3.scaleBand()
+    .rangeRound([0, width])
+    .paddingInner(0.1);
+
+var x1 = d3.scaleBand()
+    .padding(0.05);
+
+var y = d3.scaleLinear()
+    .rangeRound([height, 0]);
+
+showNormal()
+function showGraph(type){
+	//console.log(value);
+	buttonSelect = type;
+	if(type == "normal"){
+		showNormal();
+	} else if (type == "log"){
+		showLog();
+	}
+}
+function showNormal(){
+	var z = d3.scaleOrdinal().range(["#A0CBF8", "#8DC0F7", "#79B6F6", "#66ABF4", "#53A1F3", "#4096F2"]);
+	d3.csv("DataExpend.csv", function(d, i, columns) {
+	    for (var i = 1, n = columns.length; i < n; ++i)
+	    d[columns[i]] = +(d[columns[i]]);
+	    console.log("this is d:")
+	    console.log(d)
+	    return d;
+	  }, function(error, data) {
+	    if (error) throw error;
+
+	    var years = data.columns.slice(1);
+	    console.log(years);
+
+	    x0.domain(data.map(function(d) {
+	      return d.CountryExpend;
+	    }));
+	    x1.domain(years).rangeRound([0, x0.bandwidth()]);
+	    y.domain([0, d3.max(data, function(d) {
+	      return d3.max(years, function(years) {
+	        return d[years];
+	      });
+	    })]).nice();
+
+	    g.append("g")
+	      .selectAll("g")
+	      .data(data)
+	      .enter().append("g")
+	        .attr("transform", function(d) {
+	          return "translate(" + x0(d.CountryExpend) + ",0)";
+	        })
+	      .selectAll("rect")
+	      .data(function(d) {
+	        return years.map(function(years) {
+	          return {years: years, value: d[years]};
+	          });
+	        })
+	      .enter().append("rect")
+	        .attr("x", function(d) {
+	          return x1(d.years);
+	        })
+	        .attr("y", function(d) {
+	          return y(d.value);
+	        })
+	        .attr("width", x1.bandwidth())
+	        .attr("height", function(d) {
+	          return height - y(d.value);
+	        })
+	        .attr("fill", function(d) {
+	          return z(d.years);
+	        });
+
+	    g.append("g")
+	        .attr("class", "axis")
+	        .attr("transform", "translate(0," + height + ")")
+	        .call(d3.axisBottom(x0));
+
+	    g.append("g")
+	        .attr("class", "axis")
+	        .call(d3.axisLeft(y).ticks(null, "s"))
+	      .append("text")
+	        .attr("x", 2)
+	        .attr("y", y(y.ticks().pop()) + 0.5)
+	        .attr("dy", "0.32em")
+	        .attr("fill", "#000")
+	        .attr("font-weight", "bold")
+	        .attr("text-anchor", "start")
+	        .attr("font-size", 20)
+	        .text("Millitary Expenditure Based on GDP");
+
+	    var legend = g.append("g")
+	        .attr("font-family", "sans-serif")
+	        .attr("font-size", 20)
+	        .attr("text-anchor", "end")
+	        .attr("transform", "translate(0, 10)")
+	      .selectAll("g")
+	      .data(years.slice().reverse())
+	      .enter().append("g")
+	        .attr("transform", function(d, i) {
+	          return "translate(0," + i * 50 + ")";
+	        });
+
+	    legend.append("rect")
+	        .attr("x", width - 19)
+	        .attr("width", 50)
+	        .attr("height", 30)
+	        .attr("fill", z);
+
+	    legend.append("text")
+	        .attr("x", width - 30)
+	        .attr("y", 9.5)
+	        .attr("dy", "0.32em")
+	        .text(function(d) {
+	          return d;
+	        });
+
+	});
+	svg.selectAll("rect")
+        .remove()
+        .exit();
+    svg.selectAll(".axis")
+    	.remove()
+    	.exit();
+
+}
+function showLog(){
+	var z = d3.scaleOrdinal().range(["#F6948D", "#F5827A", "#F47167", "#F25F54", "#F14D41", "#EF3B2E"]);
+	d3.csv("DataExpend.csv", function(d, i, columns) {
+	    for (var i = 1, n = columns.length; i < n; ++i)
+	    d[columns[i]] = +Math.log(d[columns[i]]);
+	    console.log("this is d:")
+	    console.log(d)
+	    return d;
+	  }, function(error, data) {
+	    if (error) throw error;
+
+	    var years = data.columns.slice(1);
+	    var rects = svg.select(".rect")
+	    console.log(years);
+
+	    x0.domain(data.map(function(d) {
+	      return d.CountryExpend;
+	    }));
+	    x1.domain(years).rangeRound([0, x0.bandwidth()]);
+	    y.domain([0, d3.max(data, function(d) {
+	      return d3.max(years, function(years) {
+	        return d[years];
+	      });
+	    })]).nice();
+
+	    rects.enter()
+	    g.append("g")
+	      .selectAll("g")
+	      .data(data)
+	      .enter().append("g")
+	        .attr("transform", function(d) {
+	          return "translate(" + x0(d.CountryExpend) + ",0)";
+	        })
+	      .selectAll("rect")
+	      .data(function(d) {
+	        return years.map(function(years) {
+	          return {years: years, value: d[years]};
+	          });
+	        })
+	      .enter().append("rect")
+	        .attr("x", function(d) {
+	          return x1(d.years);
+	        })
+	        .attr("y", function(d) {
+	          return y(d.value);
+	        })
+	        .attr("width", x1.bandwidth())
+	        .attr("height", function(d) {
+	          return height - y(d.value);
+	        })
+	        .attr("fill", function(d) {
+	          return z(d.years);
+	        });
+
+	    g.append("g")
+	        .attr("class", "axis")
+	        .attr("transform", "translate(0," + height + ")")
+	        .call(d3.axisBottom(x0));
+
+	    g.append("g")
+	        .attr("class", "axis")
+	        .call(d3.axisLeft(y).ticks(null, "s"))
+	      .append("text")
+	        .attr("x", 2)
+	        .attr("y", y(y.ticks().pop()) + 0.5)
+	        .attr("dy", "0.32em")
+	        .attr("fill", "#000")
+	        .attr("font-weight", "bold")
+	        .attr("text-anchor", "start")
+	        .text("Millitary Expenditure Based on GDP");
+
+	    var legend = g.append("g")
+	        .attr("font-family", "sans-serif")
+	        .attr("font-size", 20)
+	        .attr("text-anchor", "end")
+	        .attr("transform", "translate(0, 10)")
+	      .selectAll("g")
+	      .data(years.slice().reverse())
+	      .enter().append("g")
+	        .attr("transform", function(d, i) {
+	          return "translate(0," + i * 50 + ")";
+	        });
+
+	    legend.append("rect")
+	        .attr("x", width - 19)
+	        .attr("width", 50)
+	        .attr("height", 30)
+	        .attr("fill", z);
+
+	    legend.append("text")
+	        .attr("x", width - 30)
+	        .attr("y", 9.5)
+	        .attr("dy", "0.32em")
+	        .text(function(d) {
+	          return d;
+	        });
+
+	});
+	svg.selectAll("rect")
+        .remove()
+        .exit();
+    svg.selectAll(".axis")
+    	.remove()
+    	.exit();
+    svg.transition()
+    	.duration(750);
 }
 
 </script>
