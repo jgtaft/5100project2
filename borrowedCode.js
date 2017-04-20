@@ -332,6 +332,7 @@ function showLog(){
 		      	.attr("x", width - 24)
 		      	.attr("y", 9.5)
 		      	.attr("dy", "0.32em")
+		      	.attr("fill", "white")
 		      	.text(function(d) { return d; });
 	});
 	//Help from: http://bl.ocks.org/juan-cb/ab9a30d0e2ace0d2dc8c
