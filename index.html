@@ -8,11 +8,19 @@
 <link href="https://fonts.googleapis.com/css?family=Assistant" rel="stylesheet">
 
 <style>
+html{
+  background-color: #1F1F1F;
+  color: white;
+}
 body {
   font-family: 'Assistant', sans-serif;
 }
 h1,h3{
   font-family: 'Bitter', serif;
+}
+p{
+  font-family: 'Bitter', serif;
+  font-size: 10pt;
 }
 #yearSlider {
   width: 1000px;
@@ -35,11 +43,12 @@ h1,h3{
   stroke: #888;
 }
 .tick{
-  font-size: 15pt;
-  stroke-width: 4;
-}
-.domain{
-  stroke-width: 4;
+  font-size: 8pt;
+  stroke-width: .05;
+  fill: white;
+  stroke: white;
+  color: white;
+  background-color: white;
 }
 #button1{
   width: 20%;
@@ -59,7 +68,28 @@ h1,h3{
   margin-top:20;
   margin-bottom: 20;
 }
-
+.axis{
+  color: white;
+}
+svg #graph{
+  font-family: 'Assistant', sans-serif;
+}
+svg #graph text{
+  font-family: 'Assistant', sans-serif;
+  fill: white;
+}
+.domain{
+  stroke: white;
+}
+.tick text{
+  font-family: 'Assistant', sans-serif;
+  fill: white;
+}
+.tick line{
+  fill: white;
+  stroke: white;
+  stroke-width: 2;
+}
 </style>
 </head>
 <body>
@@ -68,7 +98,7 @@ h1,h3{
   on staffing and supplying its armed forces. <br> It makes sense that larger countries
 have larger militaries, and richer countries spend more on their miltaries.<br>
 But showing these differences on different scales can give us a clearer picture
-of who devotes what resources to maintaining their military power.</h4>
+of who devotes what resources to maintaining their military power. <br> We have chosen to use two scales: (1) Standard scale (2) Logarithmic scale. We chose one of the scales to be a "standard scale", to show the raw data <br> and "Logarithmic scale" to show data but shrinking the range of data values because there is such a large range. The datasets <br> were from Datahub, Gapminder and World Bank.</h4>
 <svg id="line" height="5" width="1000">
   <line x1="0" y1="2" x2="1000" y2="2" stroke-width="2">
 </svg>
@@ -242,29 +272,34 @@ function makeLegend(type, scale){
   labels.append("text")
     .attr("x", 60)
     .attr("y", 245)
-    .text("0");
+    .text("0")
+    .style("fill", "white");
 
   if(type=="total"){
     labels.append("text")
       .attr("x", 55)
       .attr("y", 245 + (25 * 9))
-      .text(totalStandard.domain()[1] + " people");
+      .text(totalStandard.domain()[1] + " people")
+      .style("fill", "white");
 
     labels.append("text")
       .attr("x", 30)
       .attr("y", 225)
       .text("Number of People")
+      .style("fill", "white")
   }
   if(type=="percent"){
     labels.append("text")
       .attr("x", 55)
       .attr("y", 245 + (25 * 9))
-      .text(percentStandard.domain()[1] + " %");
+      .text(percentStandard.domain()[1] + " %")
+      .style("fill", "white");
 
     labels.append("text")
       .attr("x", 30)
       .attr("y", 225)
       .text("Percent of Labor Force")
+      .style("fill", "white");
   }
 }
 
@@ -278,14 +313,14 @@ function showInfo(year, total, percent, country, coords){
     .attr("x", x)
     .attr("y", y)
     .attr("d", "m " + x + " " + y + " l 25 -50 v 100 z")
-    .attr("fill", "black")
+    .attr("fill", "white")
     .attr("opacity", 0.9);
   popup.append("rect")
     .attr("height", 100)
     .attr("width", 260)
     .attr("x", x + 25)
     .attr("y", y - 50)
-    .attr("fill", "black")
+    .attr("fill", "white")
     .attr("opacity", 0.9);
   popup.append("text")
     .attr("id", "name")
@@ -319,34 +354,35 @@ function showInfo(year, total, percent, country, coords){
   and lowest gross domestic products (GDPs).</p>
 <svg id="graph" width="1000" height="500"></svg>
 <div id="buttons">
-	<button type="button" id="button1" onclick="showGraph('normal')">Military Expenditure Normal Scale</button>
+	<button type="button" id="button1" onclick="showGraph('normal')">Military Expenditure Standard Scale</button>
 	<button type="button" id="button2" onclick="showGraph('log')">Military Expenditure Log Scale</button>
 <div>
+<script src="borrowedCode.js"></script>
 <script>
 
 var buttonSelect;
 
 //code from https://bl.ocks.org/mbostock/3887051 for lines 65-347
 var svg = d3.select("svg#graph"),
-    margin = {top: 50, right: 20, bottom: 25, left: 60},
-    width = +svg.attr("width") - margin.left - margin.right,
-    height = +svg.attr("height") - margin.top - margin.bottom,
-    g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  margin = {top: 50, right: 20, bottom: 50, left: 60},
+  width = +svg.attr("width") - margin.left - margin.right,
+  height = +svg.attr("height") - margin.top - margin.bottom,
+  g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 var x0 = d3.scaleBand()
-    .rangeRound([0, width])
-    .paddingInner(0.1);
+  .rangeRound([0, width])
+  .paddingInner(0.1);
 
 var x1 = d3.scaleBand()
-    .padding(0.05);
+  .padding(0.05);
 
 var y = d3.scaleLinear()
-    .rangeRound([height, 0]);
+  .rangeRound([height, 0]);
 
 // Define the div for the tooltip
 var div = d3.select("body").append("div")
-    .attr("class", "tooltip")
-    .style("opacity", 0);
+  .attr("class", "tooltip")
+  .style("opacity", 0);
 
 showNormal();
 
@@ -360,359 +396,10 @@ function showGraph(type){
 	}
 }
 
-// function to show the normal scale graph
-function showNormal(){
-	//setting the color to match the blue color in other graph
-	var colors = d3.scaleOrdinal().range(["#A0CBF8", "#8DC0F7", "#79B6F6", "#66ABF4", "#53A1F3", "#4096F2"]);
-
-	//collection data form csv file
-	d3.csv("DataExpend.csv", function(d, i, columns) {
-		//parsing out the data by column to help gather country and year data
-	    for (var i = 1, n = columns.length; i < n; ++i)
-	    d[columns[i]] = +(d[columns[i]]);
-	    return d;
-	  }, function(error, data) {
-	    if (error) throw error;
-
-	    //collecting all the years form the data set and making it an array
-	    var years = data.columns.slice(1);
-	    //console.log(years);
-
-	    //setting the x domain to the countries in the data set
-	    x0.domain(data.map(function(d) {
-	      return d.CountryExpend;
-	    }));
-	    // second x domain because showing five graphs per country
-	    x1.domain(years).rangeRound([0, x0.bandwidth()]);
-	    // setting y domain based on the values for each year
-	    y.domain([0, d3.max(data, function(d) {
-	      return d3.max(years, function(years) {
-	        return d[years];
-	      });
-	    })]).nice();
-
-	    // appending to g
-	    g.append("g")
-	      .selectAll("g")
-	      .data(data)
-	      .enter().append("g")
-	      	//translating/transforming spot where each area for each country will be in the graph
-	        .attr("transform", function(d) {
-	          return "translate(" + x0(d.CountryExpend) + ",0)";
-	        })
-	      .selectAll("rect")
-	      .data(function(d) {
-	      	//collecting the data and maping country, years and values for country to create rectangles
-	        return years.map(function(years) {
-	          return {years: years, value: d[years], country: d.CountryExpend};
-	          });
-	        })
-	      	// creating rectangles based on above with x value year and y value value of the specific year. Appending it so it all clusters together
-	      	// for each country
-	      .enter().append("rect")
-	        .attr("x", function(d) {
-	          return x1(d.years);
-	        })
-	        .attr("y", function(d) {
-	          return y(d.value);
-	        })
-	        .attr("width", x1.bandwidth())
-	        .attr("height", function(d) {
-	          return height - y(d.value);
-	        })
-	        .attr("fill", function(d) {
-	          return colors(d.years);
-	        })
-	        //code from: http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
-	        .on("mouseover", function(d) {
-	            div.transition()
-	                .duration(200)
-	                .style("opacity", .9);
-	            div	.html((d.country)+": "+(d.years)+"<br>"+"$"+(d.value))
-	                .style("left", (d3.event.pageX) + "px")
-	                .style("top", (d3.event.pageY - 28) + "px")
-	                .style("position", "absolute")
-	                .style("text-anchor", "middle")
-	                .style("text-align", "center")
-	                .style("width", 110 +"px")
-	                .style("display", "block")
-	                .style("padding-top", 3+"px")
-	                .style("margin", "auto")
-	                .style("height", 30+"px")
-	                .style("color", "white")
-	                .style("font-family", "Assistant")
-	                .style("font-size", 10)
-	                .style("background", "black")
-	                .style("border", 0+"px")
-	                .style("border-radius", 8+"px")
-	                .style("pointer-events", "none");
-            })
-	        .on("mouseout", function(d) {
-	            div.transition()
-	                .duration(200)
-	                .style("opacity", 0);
-	        });
-
-	    //creating x axis
-	    g.append("g")
-	        .attr("class", "axis")
-	        .attr("transform", "translate(0," + height + ")")
-	        .call(d3.axisBottom(x0));
-
-	    // creating y axis with hashes
-	    g.append("g")
-	        .attr("class", "axis")
-	        .call(d3.axisLeft(y).ticks(null, "s"));
-
-	    //creating x axis labels
-	    svg.append("text")
-	    	.attr("class", "axisLabels")
-	      .attr("transform","translate(" + (width/2) + " ," + (height + margin.top + 40) + ")")
-	      .style("text-anchor", "middle")
-	      .style("font-size", 10)
-	      .style("font-weight", "bold")
-	      .style("font-family", "Assistant")
-	      .text("Country");
-
-		//creating y-axis labels
-	    svg.append("text")
-	    	.attr("class", "axisLabels")
-	      .attr("transform", "rotate(-90)")
-	      .attr("y", 0 - margin.right + 20)
-	      .attr("x",0 - (height / 2) -40)
-	      .attr("dy", "1em")
-	      .style("text-anchor", "middle")
-	      .style("font-size", 10)
-	      .style("font-weight", "bold")
-	      .style("font-family", "Assistant")
-	      .text("Military Expenditure in $USD");
-
-	    //creating title for graph
-	    svg.append("text")
-	    	.attr("class", "axisLabels")
-		    .attr("font-family", "Assistant")
-		    .attr("text-anchor", "top")
-		    .attr("text-align", "center")
-		    .attr("font-weight", "bold")
-		    .attr("font-size", 20)
-		    .attr("x", width/2-200)
-		    .attr("y", 35)
-		    .text("Military Expenditure Based on GDP in $USD (Normal Scale)");
-
-	    // creating the legend for the graph with colors that match year
-	    var legend = g.append("g")
-	      .attr("font-family", "Assistant")
-	      .attr("font-size", 10)
-	      .attr("text-anchor", "end")
-	    .selectAll("g")
-	    .data(years.slice().reverse())
-	    .enter().append("g")
-	      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
-
-	      //creating rectangles filled with color matching bar rectangles
-		  legend.append("rect")
-		      .attr("x", width - 19)
-		      .attr("width", 19)
-		      .attr("height", 19)
-		      .attr("fill", colors);
-
-		  //creating text for each rectangle in legend
-		  legend.append("text")
-		      .attr("x", width - 24)
-		      .attr("y", 9.5)
-		      .attr("dy", "0.32em")
-		      .text(function(d) { return d; });
-
-	});
-	//Help from: http://bl.ocks.org/juan-cb/ab9a30d0e2ace0d2dc8c
-	// removing axis and rectangles so graph will update based on the button selected
-	svg.selectAll("rect")
-        .remove()
-        .exit();
-    svg.selectAll(".axis")
-    	.remove()
-    	.exit();
-   	svg.selectAll(".axisLabels")
-   		.remove()
-   		.exit();
-
-}
-function showLog(){
-	var colors = d3.scaleOrdinal().range(["#F6948D", "#F5827A", "#F47167", "#F25F54", "#F14D41", "#EF3B2E"]);
-		//collection data form csv file
-	d3.csv("DataExpend.csv", function(d, i, columns) {
-		//parsing out the data by column to help gather country and year data
-	    for (var i = 1, n = columns.length; i < n; ++i)
-	    d[columns[i]] = +Math.log(d[columns[i]]);
-	    return d;
-	  }, function(error, data) {
-	    if (error) throw error;
-
-	    //collecting all the years form the data set and making it an array
-	    var years = data.columns.slice(1);
-	    //console.log(years);
-
-	    //setting the x domain to the countries in the data set
-	    x0.domain(data.map(function(d) {
-	      return d.CountryExpend;
-	    }));
-	    // second x domain because showing five graphs per country
-	    x1.domain(years).rangeRound([0, x0.bandwidth()]);
-	    // setting y domain based on the values for each year
-	    y.domain([0, d3.max(data, function(d) {
-	      return d3.max(years, function(years) {
-	        return d[years];
-	      });
-	    })]).nice();
-
-	    // appending to g
-	    g.append("g")
-	      .selectAll("g")
-	      .data(data)
-	      .enter().append("g")
-	      	//translating/transforming spot where each area for each country will be in the graph
-	        .attr("transform", function(d) {
-	          return "translate(" + x0(d.CountryExpend) + ",0)";
-	        })
-	      .selectAll("rect")
-	      .data(function(d) {
-	      	//collecting the data and maping years and values for country to create rectangles
-	        return years.map(function(years) {
-	          return {years: years, value: d[years], country: d.CountryExpend};
-	          });
-	        })
-	      	// creating rectangles based on above with x value year and y value value of the specific year. Appending it so it all clusters together
-	      	// for each country
-	      .enter().append("rect")
-	        .attr("x", function(d) {
-	          return x1(d.years);
-	        })
-	        .attr("y", function(d) {
-	          return y(d.value);
-	        })
-	        .attr("width", x1.bandwidth())
-	        .attr("height", function(d) {
-	          return height - y(d.value);
-	        })
-	        .attr("fill", function(d) {
-	          return colors(d.years);
-	        })
-	        //code from: http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
-	        .on("mouseover", function(d) {
-	            div.transition()
-	                .duration(200)
-	                .style("opacity", .9);
-	            div	.html("Log Scale" +"<br>"+(d.country)+": "+(d.years)+"<br>"+"$"+(Math.round(Math.exp(d.value))))
-	                .style("left", (d3.event.pageX) + "px")
-	                .style("top", (d3.event.pageY - 28) + "px")
-	                .style("position", "absolute")
-	                .style("text-anchor", "middle")
-	                .style("text-align", "center")
-	                .style("width", 130 +"px")
-	                .style("display", "block")
-	                .style("padding-top", 3+"px")
-	                .style("margin", "auto")
-	                .style("height", 40+"px")
-	                .style("color", "white")
-	                .style("font-family", "Assistant")
-	                .style("font-size", 10)
-	                .style("background", "black")
-	                .style("border", 0+"px")
-	                .style("border-radius", 8+"px")
-	                .style("pointer-events", "none");
-            })
-	        .on("mouseout", function(d) {
-	            div.transition()
-	                .duration(200)
-	                .style("opacity", 0);
-	        });
-	    //creating x axis
-	    g.append("g")
-	        .attr("class", "axis")
-	        .attr("transform", "translate(0," + height + ")")
-	        .call(d3.axisBottom(x0));
-
-	    // creating y axis with hashes
-	    g.append("g")
-	        .attr("class", "axis")
-	        .call(d3.axisLeft(y).ticks(null, "s"));
-
-	    //creating x axis labels
-	    svg.append("text")
-	    .attr("class", "axisLabels")
-	      .attr("transform","translate(" + (width/2) + " ," + (height + margin.top + 40) + ")")
-	      .style("text-anchor", "middle")
-	      .style("font-size", 10)
-	      .style("font-weight", "bold")
-	      .style("font-family", "Assistant")
-	      .text("Country");
-
-		//creating y-axis labels
-	    svg.append("text")
-	    .attr("class", "axisLabels")
-	      .attr("transform", "rotate(-90)")
-	      .attr("y", 0 - margin.right + 20)
-	      .attr("x",0 - (height / 2) -40)
-	      .attr("dy", "1em")
-	      .style("text-anchor", "middle")
-	      .style("font-size", 10)
-	      .style("font-weight", "bold")
-	      .style("font-family", "Assistant")
-	      .text("Log of Military Expenditure in $USD");
-
-	    //creating title for graph
-	    svg.append("text")
-	    	.attr("class", "axisLabels")
-		    .attr("font-family", "Assistant")
-		    .attr("text-anchor", "top")
-		    .attr("text-align", "center")
-		    .attr("font-weight", "bold")
-		    .attr("font-size", 20)
-		    .attr("x", width/2-200)
-		    .attr("y", 35)
-		    .text("Military Expenditure Based on GDP in $USD (Log Scale)");
-
-	    // creating the legend for the graph with colors that match year
-	    var legend = g.append("g")
-	      .attr("font-family", "Assistant")
-	      .attr("font-size", 10)
-	      .attr("text-anchor", "end")
-	    .selectAll("g")
-	    .data(years.slice().reverse())
-	    .enter().append("g")
-	      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
-
-	      //creating rectangles filled with color matching bar rectangles
-		  legend.append("rect")
-		      .attr("x", width - 19)
-		      .attr("width", 19)
-		      .attr("height", 19)
-		      .attr("fill", colors);
-
-		  //creating text for each rectangle in legend
-		  legend.append("text")
-		      .attr("x", width - 24)
-		      .attr("y", 9.5)
-		      .attr("dy", "0.32em")
-		      .text(function(d) { return d; });
-
-	});
-	//Help from: http://bl.ocks.org/juan-cb/ab9a30d0e2ace0d2dc8c
-	// removing axis and rectangles so graph will update based on the button selected
-	svg.selectAll("rect")
-        .remove()
-        .exit();
-    svg.selectAll(".axis")
-    	.remove()
-    	.exit();
-   	svg.selectAll(".axisLabels")
-   	 	.remove()
-   	 	.exit();
-}
-
 </script>
 <svg id="line" height="5" width="1000">
   <line x1="0" y1="2" x2="1000" y2="2" stroke-width="2">
 </svg>
+<p> By Jessie Taft (jgt43) and Dana Daniels (dbd62) </p>
 </body>
 </html>
