@@ -1,3 +1,4 @@
+//Code from: https://bl.ocks.org/mbostock/3887051
 // function to show the normal scale graph 
 function showNormal(){
 	//setting the color to match the blue color in other graph
@@ -176,6 +177,7 @@ function showNormal(){
    		.exit();
 
 }
+//code from: https://bl.ocks.org/mbostock/3887051
 function showLog(){
 	var colors = d3.scaleOrdinal().range(["#F6948D", "#F5827A", "#F47167", "#F25F54", "#F14D41", "#EF3B2E"]);
 		//collection data form csv file

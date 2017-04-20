@@ -18,9 +18,13 @@ body {
 h1,h3{
   font-family: 'Bitter', serif;
 }
-p{
+h2{
   font-family: 'Bitter', serif;
   font-size: 10pt;
+}
+#cite{
+  font-family: 'Assistant', sans-serif;
+  font-size: 8pt;
 }
 #yearSlider {
   width: 1000px;
@@ -100,6 +104,15 @@ svg #graph text{
   fill: white;
   stroke: white;
   stroke-width: 2;
+}
+#cite a{
+  font-family: 'Assistant', sans-serif;
+  font-size: 8pt;
+  padding: 1px;
+  color: white;
+}
+#cite a:hover{
+  color: #EF3B2E;
 }
 </style>
 </head>
@@ -370,7 +383,7 @@ function showInfo(year, total, percent, country, coords){
 
 var buttonSelect;
 
-//code from https://bl.ocks.org/mbostock/3887051 for lines 65-347
+//code from https://bl.ocks.org/mbostock/3887051 for lines 386-406
 var svg = d3.select("svg#graph"),
   margin = {top: 50, right: 20, bottom: 50, left: 60},
   width = +svg.attr("width") - margin.left - margin.right,
@@ -408,6 +421,12 @@ function showGraph(type){
 <svg id="line" height="5" width="1000">
   <line x1="0" y1="2" x2="1000" y2="2" stroke-width="2">
 </svg>
-<p> By Jessie Taft (jgt43) and Dana Daniels (dbd62) </p>
+<h2> By Jessie Taft (jgt43) and Dana Daniels (dbd62) </h2>
+<p id="cite"> Data from:
+<a href="https://docs.google.com/spreadsheets/u/1/d/1HXH3ncdQLFpOXVNdC2nkPCSGz_perkfPcBeU1e2HF24/pub?gid=0">Military Expenditure (% of GDP),</a>
+<a href="http://data.worldbank.org/indicator/NY.GDP.MKTP.CD?end=2005&start=2000">GDP (Current US$),</a>
+<a href="https://datahub.io/dataset/iso-3166-1-alpha-2-country-codes/resource/9c3b30dd-f5f3-4bbe-a3cb-d7b2c21d66ce">ISO-3166-1 Country Codes,</a>
+<a href="http://www.gapminder.org/world/#$majorMode=chart$is;shi=t;ly=2003;lb=f;il=t;fs=11;al=30;stl=t;st=t;nsl=t;se=t$wst;tts=C$ts;sp=5.59290322580644;ti=2010$zpv;v=0$inc_x;mmid=XCOORDS;iid=phAwcNAVuyj1jiMAkmq1iMg;by=ind$inc_y;mmid=YCOORDS;iid=0Asm_G8nr4TCSdG1nNjk5RzItcUp6N2dSdHUwOENXa0E;by=ind$inc_s;uniValue=8.21;iid=phAwcNAVuyj0XOoBL_n5tAQ;by=ind$inc_c;uniValue=255;gid=CATID0;by=grp$map_x;scale=log;dataMin=194;dataMax=96846$map_y;scale=lin;sma=49;smi=2.65$cd;bd=0$inds=">Armed Forces Personnel (Total),</a>
+<a href="http://www.gapminder.org/world/#$majorMode=chart$is;shi=t;ly=2003;lb=f;il=t;fs=11;al=30;stl=t;st=t;nsl=t;se=t$wst;tts=C$ts;sp=5.59290322580644;ti=2010$zpv;v=0$inc_x;mmid=XCOORDS;iid=phAwcNAVuyj1jiMAkmq1iMg;by=ind$inc_y;mmid=YCOORDS;iid=0Asm_G8nr4TCSdFFoVWRjcUdKZDFydGdGNXkzS2ZRbHc;by=ind$inc_s;uniValue=8.21;iid=phAwcNAVuyj0XOoBL_n5tAQ;by=ind$inc_c;uniValue=255;gid=CATID0;by=grp$map_x;scale=log;dataMin=194;dataMax=96846$map_y;scale=lin;sma=49;smi=2.65$cd;bd=0$inds=">Armed Forces Personnel (% of Labor Force),</a> </p>
 </body>
 </html>
