@@ -1,6 +1,6 @@
 <html>
 <head>
-<title>P2</title>
+<title>P2: The Scale of the World's Militaries</title>
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="http://d3js.org/topojson.v2.min.js"></script>
 <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
@@ -68,6 +68,17 @@ p{
   margin-top:20;
   margin-bottom: 20;
 }
+input[type="radio"]{
+  margin: 5 5 5 7;
+  height:18;
+  width:18;
+}
+#start{
+  float:left;
+}
+#stop{
+  margin-left: 980px;
+}
 .axis{
   color: white;
 }
@@ -104,18 +115,15 @@ of who devotes what resources to maintaining their military power. <br> We have 
 </svg>
 <h3>Part 1: Military Size</h3>
 <p>Choose your data type, and then choose a scale to make your map.<br>
-  Move the slider to see how the size of each country's military changes over time.<br>
+  Move the slider to see how the size of each country's military changes between 1989 and 2008.<br>
   Click on a country to learn more about it. </p>
 
 <div id="types">
 Pick a data type:<br/>
-<input type="radio" value="total" name="type" checked="checked">Total Armed Forces</input><br/>
-<input type="radio" value="percent" name="type">Armed Forces as % of Labor Force</input>
+<input id="radio" type="radio" value="total" name="type" checked="checked">Total Armed Forces</input><br/>
+<input id="radio" type="radio" value="percent" name="type">Armed Forces as % of Labor Force</input>
 </div>
-<br/>
-<br/>
-<br/>
-<br/>
+<br/><br/><br/><br/><br/>
 <button type="button" id="button1" onclick="showMap('standard', yearSlider.value)">Show on Standard Scale</button>
 <button type="button" id="button2" onclick="showMap('log', yearSlider.value)">Show on Log Scale</button>
 
@@ -123,7 +131,7 @@ Pick a data type:<br/>
 <div id="date"></div>
 
 <input id="yearSlider" type="range" min="1989" max="2008" value="1989" oninput="showMap(scaleSelection, value)">
-
+<div id="start">1989</div><div id="stop">2008</div>
 <br/>
 
 <script>
@@ -313,14 +321,14 @@ function showInfo(year, total, percent, country, coords){
     .attr("x", x)
     .attr("y", y)
     .attr("d", "m " + x + " " + y + " l 25 -50 v 100 z")
-    .attr("fill", "white")
+    .attr("fill", "black")
     .attr("opacity", 0.9);
   popup.append("rect")
     .attr("height", 100)
     .attr("width", 260)
     .attr("x", x + 25)
     .attr("y", y - 50)
-    .attr("fill", "white")
+    .attr("fill", "black")
     .attr("opacity", 0.9);
   popup.append("text")
     .attr("id", "name")
@@ -351,7 +359,7 @@ function showInfo(year, total, percent, country, coords){
 </svg>
 <h3> Part 2: Military Spending</h3>
 <p> Choose a scale to see the military expenditure for the countries with the five highest
-  and lowest gross domestic products (GDPs).</p>
+  and lowest gross domestic products (GDPs) between 2000 and 2005.</p>
 <svg id="graph" width="1000" height="500"></svg>
 <div id="buttons">
 	<button type="button" id="button1" onclick="showGraph('normal')">Military Expenditure Standard Scale</button>
