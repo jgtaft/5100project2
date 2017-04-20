@@ -4,12 +4,15 @@
 <script src="https://d3js.org/d3.v4.min.js"></script>
 <script src="http://d3js.org/topojson.v2.min.js"></script>
 <script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
-<link href="https://fonts.googleapis.com/css?family=Oxygen" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Bitter" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Assistant" rel="stylesheet">
 
 <style>
 body {
-  font-family: 'Oxygen', sans-serif;
-  text-align: center;
+  font-family: 'Assistant', sans-serif;
+}
+h1,h3{
+  font-family: 'Bitter', serif;
 }
 #yearSlider {
   width: 1000px;
@@ -17,30 +20,19 @@ body {
 #legendText {
   text-anchor: middle;
 }
-#makemap{
-  width: 30%;
-  height: 5%;
-  background-color: grey;
-  border-style: none;
-  color: white;
-}
 #date{
   size: 100pt;
   font-weight: bold;
-}
-#scales{
-  margin: 5 5 5 5;
-  float:left;
-  text-align: left;
 }
 #types{
   margin: 5 5 5 5;
   float:left;
   text-align: left;
 }
-svg{
-  margin:auto;
-  clear:both;
+#line{
+  margin-top: 20;
+  margin-bottom: 20;
+  stroke: #888;
 }
 .tick{
   font-size: 15pt;
@@ -55,42 +47,52 @@ svg{
   background-color: #4096F2;
   border-style: none;
   color: white;
+  margin-top:20;
+  margin-bottom: 20;
 }
 #button2{
-width: 20%;
-height: 5%;
-background-color: #EF3B2E;
-border-style: none;
-color: white;
+  width: 20%;
+  height: 5%;
+  background-color: #EF3B2E;
+  border-style: none;
+  color: white;
+  margin-top:20;
+  margin-bottom: 20;
 }
 
 </style>
 </head>
 <body>
-<h2>The World's Armed Forces, 1989-2008</h2>
-<p>Choose your data and scale types, and then click the button to make your map.<br/>
-  Move the slider to see how the size of each country's military changes over time.<br/>
+<h1>The Scale of the World's Militaries</h1>
+<h4>Nearly every country in the world spends a significant amount of money and labor
+  on staffing and supplying its armed forces. <br> It makes sense that larger countries
+have larger militaries, and richer countries spend more on their miltaries.<br>
+But showing these differences on different scales can give us a clearer picture
+of who devotes what resources to maintaining their military power.</h4>
+<svg id="line" height="5" width="1000">
+  <line x1="0" y1="2" x2="1000" y2="2" stroke-width="2">
+</svg>
+<h3>Part 1: Military Size</h3>
+<p>Choose your data type, and then choose a scale to make your map.<br>
+  Move the slider to see how the size of each country's military changes over time.<br>
   Click on a country to learn more about it. </p>
-<div id="radios">
-<div id="scales">
-Pick a scale type:<br/>
-<input type="radio" value="standard" name="scale" checked="checked">Standard Scale</input><br/>
-<input type="radio" value="log" name="scale">Log Scale</input></div>
+
 <div id="types">
 Pick a data type:<br/>
 <input type="radio" value="total" name="type" checked="checked">Total Armed Forces</input><br/>
 <input type="radio" value="percent" name="type">Armed Forces as % of Labor Force</input>
 </div>
-</div>
 <br/>
 <br/>
 <br/>
 <br/>
-<button type="button" id="makemap" onclick="chooseMap(yearSlider.value)">Make me a map!</button>
+<button type="button" id="button1" onclick="showMap('standard', yearSlider.value)">Show on Standard Scale</button>
+<button type="button" id="button2" onclick="showMap('log', yearSlider.value)">Show on Log Scale</button>
+
 <svg id="map"></svg>
 <div id="date"></div>
 
-<input id="yearSlider" type="range" min="1989" max="2008" value="1989" oninput="chooseMap(value)">
+<input id="yearSlider" type="range" min="1989" max="2008" value="1989" oninput="showMap(scaleSelection, value)">
 
 <br/>
 
@@ -105,25 +107,22 @@ var map = d3.select("svg#map")
   .attr("float", "left");
 var projection = d3.geoRobinson();
 var pathGenerator = d3.geoPath().projection(projection);
-//color scales
-// var importColorScale = ["#ffffff", "#E3EEF4", "#C6DDE8", "#AACCDD", "#8EBBD2", "#5599BB", "#71AAC6", "#3988B0", "#1C77A4", "#006699"];
-// d3.scaleOrdinal().range(["#4DB6AC", "#48A7C8", "#2D8ED7", "#448AFF", "#22A3EA", "#00BCD4", "#01579b", "#0d4781"])
-var totalColorScale = ["#ffffff", "#ECF5FE", "#C6E0FB", "#B3D5FA", "#A0CBF8", "#8DC0F7", "#79B6F6", "#66ABF4", "#53A1F3", "#4096F2"];
-var percentColorScale = ["#FFFFFF", "#FCDBD9", "#F9B8B3", "#F8A6A0", "#F6948D", "#F5827A", "#F47167", "#F25F54", "#F14D41", "#EF3B2E"];
+//blue scale
+var standardColorScale = ["#ffffff", "#ECF5FE", "#C6E0FB", "#B3D5FA", "#A0CBF8", "#8DC0F7", "#79B6F6", "#66ABF4", "#53A1F3", "#4096F2"];
+//red scale
+var logColorScale = ["#FFFFFF", "#FCDBD9", "#F9B8B3", "#F8A6A0", "#F6948D", "#F5827A", "#F47167", "#F25F54", "#F14D41", "#EF3B2E"];
 //global scales
 var totalStandard, percentStandard, totalLog, percentLog;
-//global radio button state variables
-var scale, type;
+//global radio button state variable
+var type, scaleSelection;
 
 //parse functions check every value and update the maximum for each
 var maxTotal = 0;
-var totalArr = [];
 var parseTotal = function(row){
   row.ISO = Number(row.ISO);
   Object.values(row).forEach(function(value,index){
     if(index<20) {
       value = Number(value);
-      totalArr.push(value);
       if(value>maxTotal){ maxTotal = value; }
     }
   })
@@ -131,13 +130,11 @@ var parseTotal = function(row){
 }
 //and the same for exports
 var maxPercent = 0;
-var percentArr = [];
 var parsePercent = function(row){
   row.ISO = Number(row.ISO);
   Object.values(row).forEach(function(value,index){
     if(index<20) {
       value = Number(value);
-      percentArr.push(value);
       if(value>maxPercent){ maxPercent = value; }
     }
   })
@@ -153,21 +150,18 @@ d3.queue()
     percentMap = d3.map(rawPercent, function(country){ return country.ISO; });
 
     //scale options
-    totalStandard = d3.scaleQuantize().domain([0, maxTotal]).range(totalColorScale);
-    percentStandard = d3.scaleQuantize().domain([0, maxPercent]).range(percentColorScale);
-    totalLog = d3.scaleQuantize().domain([0, Math.log(maxTotal)]).range(totalColorScale);
-    percentLog = d3.scaleQuantize().domain([0, Math.log(maxPercent)]).range(percentColorScale);
+    totalStandard = d3.scaleQuantize().domain([0, maxTotal]).range(standardColorScale).nice();
+    percentStandard = d3.scaleQuantize().domain([0, maxPercent]).range(standardColorScale).nice();
+    totalLog = d3.scaleQuantize().domain([0, Math.log(maxTotal)]).range(logColorScale).nice();
+    percentLog = d3.scaleQuantize().domain([0, Math.log(maxPercent)]).range(logColorScale).nice();
 
     countries = topojson.feature(rawCountries, rawCountries.objects.countries);
+
+    showMap("standard", 1989);
   });
 
-function chooseMap(year){
-  var scaleSelect = document.getElementsByName("scale");
-  for (var i=0; i<scaleSelect.length; i++){
-    if (scaleSelect[i].checked){
-      scale = scaleSelect[i].value;
-    }
-  }
+function showMap(scale, year){
+  //set the type radio button variable
   var typeSelect = document.getElementsByName("type");
   for (var i=0; i<typeSelect.length; i++){
     if (typeSelect[i].checked){
@@ -175,31 +169,31 @@ function chooseMap(year){
     }
   }
 
-  showMap(scale, type, year)
-}
-
-function showMap(scale, type, year){
+  scaleSelection = scale;
   map.selectAll("#popup").remove();
+  map.selectAll("#labels").remove();
 
   //make and fill map
-  projection.fitExtent([[0,0], [mapWidth, height]], countries);
+  projection.fitExtent([[0,0], [1000, 500]], countries);
 	pathGenerator = d3.geoPath().projection(projection);
 	var paths = map.selectAll("path").data(countries.features);
 	paths.enter().append("path").attr("class", "country")
 	.merge(paths)
   .attr("fill", function (country){
-    if(type=="total"){
-      var data = totalMap.get(country.id);
-      if(scale=="log"){
+    if(scale=="log"){
+      if(type=="total"){
+        var data = totalMap.get(country.id);
         return data ? totalLog(Math.log(data[year])) : "#888";
-      }else if(scale=="standard"){
-        return data ? totalStandard(data[year]) : "#888";
-      }
-    } else if(type=="percent"){
-      var data = percentMap.get(country.id);
-      if(scale=="log"){
+      }else if(type=="percent"){
+        var data = percentMap.get(country.id);
         return data ? percentLog(Math.log(data[year])) : "#888";
-      }else if(scale=="standard"){
+      }
+    } else if(scale=="standard"){
+      if(type=="total"){
+        var data = totalMap.get(country.id);
+        return data ? totalStandard(data[year]) : "#888";
+      }else if(type=="percent"){
+        var data = percentMap.get(country.id);
         return data ? percentStandard(data[year]) : "#888";
       }
     }
@@ -215,68 +209,63 @@ function showMap(scale, type, year){
   })
   .transition().attr("duration", 200);//this isnt working for some reason
 
-  showGradient(scale, type);
   document.getElementById("date").innerHTML = "Year: " + year + " ";
+  makeLegend(type, scale);
 }
 
-function showGradient(scale){
-  d3.select("#gradient").remove();
-  d3.select("#legend").remove();
-
-  //add sidebar gradient. code from: https://bl.ocks.org/mbostock/1086421
-  var gradient = map.append("defs")
-  .append("linearGradient")
-    .attr("id", "gradient")
-    .attr("x1", "50%")
-    .attr("y1", "0%")
-    .attr("x2", "50%")
-    .attr("y2", "100%")
-    .attr("spreadMethod", "pad");
-
-  gradient.append("stop")
-    .attr("offset", "100%")
-    .attr("stop-color", "#fff");
-
-  gradient.append("stop")
-    .attr("id", "end")
-    .attr("offset", "0%");
-
-  var gradientRect = map.append("rect")
-      .attr("width", 30)
-      .attr("height", 400)
-      .attr("x", 20)
-      .attr("y", 48)
-      .attr("stroke", "#888");
-
-  //labels that need to be refreshed every time a new button is clicked
-  var legendLabels = map.append("g")
-    .attr("id", "legend");
-
-  legendLabels.append("text")
-    .attr("id", "legendText")
-    .attr("x", 35)
-    .attr("y", 40);
-  legendLabels.append("text")
-    .attr("x", 55)
-    .attr("y", 60)
-    .text("0");
-  legendLabels.append("text")
-    .attr("id", "endLabel")
-    .attr("x", 55)
-    .attr("y", 445);
-
-  if(type=="total"){
-    d3.select("#end").attr("stop-color", "#4096F2")
-    d3.select("#legendText").text("Number");
-    d3.select("#endLabel").text(Math.round(maxTotal * 100)/100);
-  }else{
-    d3.select("#end").attr("stop-color", "#EF3B2E");
-    d3.select("#legendText").text("Percent");
-    d3.select("#endLabel").text(Math.round(maxPercent * 100)/100 + "%");
+function makeLegend(type, scale){
+  if(scale=="log"){
+    for(var i=0; i<logColorScale.length; i++){
+      map.append("rect")
+      .attr("x", 30)
+      .attr("y", 230 + (25*i))
+      .attr("width", 20)
+      .attr("height", 20)
+      .attr("stroke", "#888")
+      .attr("fill", logColorScale[i]);
+    }
+  }else if(scale=="standard"){
+    for(var i=0; i<standardColorScale.length; i++){
+      map.append("rect")
+      .attr("x", 30)
+      .attr("y", 230 + (25*i))
+      .attr("width", 20)
+      .attr("height", 20)
+      .attr("stroke", "#888")
+      .attr("fill", standardColorScale[i]);
+    }
   }
 
-  gradientRect.attr("fill", "url(#gradient)");
+  var labels = map.append("g")
+    .attr("id", "labels");
 
+  labels.append("text")
+    .attr("x", 60)
+    .attr("y", 245)
+    .text("0");
+
+  if(type=="total"){
+    labels.append("text")
+      .attr("x", 55)
+      .attr("y", 245 + (25 * 9))
+      .text(totalStandard.domain()[1] + " people");
+
+    labels.append("text")
+      .attr("x", 30)
+      .attr("y", 225)
+      .text("Number of People")
+  }
+  if(type=="percent"){
+    labels.append("text")
+      .attr("x", 55)
+      .attr("y", 245 + (25 * 9))
+      .text(percentStandard.domain()[1] + " %");
+
+    labels.append("text")
+      .attr("x", 30)
+      .attr("y", 225)
+      .text("Percent of Labor Force")
+  }
 }
 
 function showInfo(year, total, percent, country, coords){
@@ -289,22 +278,26 @@ function showInfo(year, total, percent, country, coords){
     .attr("x", x)
     .attr("y", y)
     .attr("d", "m " + x + " " + y + " l 25 -50 v 100 z")
-    .attr("fill", "#d6d6d6");
+    .attr("fill", "black")
+    .attr("opacity", 0.9);
   popup.append("rect")
     .attr("height", 100)
     .attr("width", 260)
     .attr("x", x + 25)
     .attr("y", y - 50)
-    .attr("fill", "#d6d6d6");
+    .attr("fill", "black")
+    .attr("opacity", 0.9);
   popup.append("text")
     .attr("id", "name")
     .attr("x", x + 30)
     .attr("y", y - 30)
+    .attr("fill", "white")
     .text(country);
   if(total=="" || percent ==""){
     popup.append("text")
       .attr("x", x + 30)
       .attr("y", y - 5)
+      .attr("fill", "white")
       .text("No data for " + country + " in " + year + ".")
   }else{
     var lines = ["In " + year + ", " + country + " had "+ total, " people in its armed forces,", "or " + Math.round(percent*10)/10 + "% of its labor force."]
@@ -312,23 +305,30 @@ function showInfo(year, total, percent, country, coords){
       popup.append("text")
         .attr("x", x + 30)
         .attr("y", y -5 + (20*i))
+        .attr("fill", "white")
         .text(lines[i]);
     }
   }
 }
 </script>
-
-<svg width="1500" height="1000"></svg>
+<svg id="line" height="5" width="1000">
+  <line x1="0" y1="2" x2="1000" y2="2" stroke-width="2">
 </svg>
-<br>
-<button type="button" id="button1" onclick="showGraph('normal')">Military Expenditure Normal Scale</button>
-<button type="button" id="button2" onclick="showGraph('log')">Military Expenditure Log Scale</button>
+<h3> Part 2: Military Spending</h3>
+<p> Choose a scale to see the military expenditure for the countries with the five highest
+  and lowest gross domestic products (GDPs).</p>
+<svg id="graph" width="1000" height="500"></svg>
+<div id="buttons">
+	<button type="button" id="button1" onclick="showGraph('normal')">Military Expenditure Normal Scale</button>
+	<button type="button" id="button2" onclick="showGraph('log')">Military Expenditure Log Scale</button>
+<div>
 <script>
 
 var buttonSelect;
 
-var svg = d3.select("svg"),
-    margin = {top: 20, right: 20, bottom: 30, left: 60},
+//code from https://bl.ocks.org/mbostock/3887051 for lines 65-347
+var svg = d3.select("svg#graph"),
+    margin = {top: 50, right: 20, bottom: 25, left: 60},
     width = +svg.attr("width") - margin.left - margin.right,
     height = +svg.attr("height") - margin.top - margin.bottom,
     g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
@@ -343,9 +343,15 @@ var x1 = d3.scaleBand()
 var y = d3.scaleLinear()
     .rangeRound([height, 0]);
 
-showNormal()
+// Define the div for the tooltip
+var div = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+showNormal();
+
+// function for when buttons are clicked to switch frclick the button to
 function showGraph(type){
-	//console.log(value);
 	buttonSelect = type;
 	if(type == "normal"){
 		showNormal();
@@ -353,43 +359,56 @@ function showGraph(type){
 		showLog();
 	}
 }
+
+// function to show the normal scale graph
 function showNormal(){
-	var z = d3.scaleOrdinal().range(["#A0CBF8", "#8DC0F7", "#79B6F6", "#66ABF4", "#53A1F3", "#4096F2"]);
+	//setting the color to match the blue color in other graph
+	var colors = d3.scaleOrdinal().range(["#A0CBF8", "#8DC0F7", "#79B6F6", "#66ABF4", "#53A1F3", "#4096F2"]);
+
+	//collection data form csv file
 	d3.csv("DataExpend.csv", function(d, i, columns) {
+		//parsing out the data by column to help gather country and year data
 	    for (var i = 1, n = columns.length; i < n; ++i)
 	    d[columns[i]] = +(d[columns[i]]);
-	    console.log("this is d:")
-	    console.log(d)
 	    return d;
 	  }, function(error, data) {
 	    if (error) throw error;
 
+	    //collecting all the years form the data set and making it an array
 	    var years = data.columns.slice(1);
-	    console.log(years);
+	    //console.log(years);
 
+	    //setting the x domain to the countries in the data set
 	    x0.domain(data.map(function(d) {
 	      return d.CountryExpend;
 	    }));
+	    // second x domain because showing five graphs per country
 	    x1.domain(years).rangeRound([0, x0.bandwidth()]);
+	    // setting y domain based on the values for each year
 	    y.domain([0, d3.max(data, function(d) {
 	      return d3.max(years, function(years) {
 	        return d[years];
 	      });
 	    })]).nice();
 
+	    // appending to g
 	    g.append("g")
 	      .selectAll("g")
 	      .data(data)
 	      .enter().append("g")
+	      	//translating/transforming spot where each area for each country will be in the graph
 	        .attr("transform", function(d) {
 	          return "translate(" + x0(d.CountryExpend) + ",0)";
 	        })
 	      .selectAll("rect")
 	      .data(function(d) {
+	      	//collecting the data and maping country, years and values for country to create rectangles
 	        return years.map(function(years) {
-	          return {years: years, value: d[years]};
+	          return {years: years, value: d[years], country: d.CountryExpend};
 	          });
 	        })
+	      	// creating rectangles based on above with x value year and y value value of the specific year. Appending it so it all clusters together
+	      	// for each country
 	      .enter().append("rect")
 	        .attr("x", function(d) {
 	          return x1(d.years);
@@ -402,101 +421,168 @@ function showNormal(){
 	          return height - y(d.value);
 	        })
 	        .attr("fill", function(d) {
-	          return z(d.years);
+	          return colors(d.years);
+	        })
+	        //code from: http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
+	        .on("mouseover", function(d) {
+	            div.transition()
+	                .duration(200)
+	                .style("opacity", .9);
+	            div	.html((d.country)+": "+(d.years)+"<br>"+"$"+(d.value))
+	                .style("left", (d3.event.pageX) + "px")
+	                .style("top", (d3.event.pageY - 28) + "px")
+	                .style("position", "absolute")
+	                .style("text-anchor", "middle")
+	                .style("text-align", "center")
+	                .style("width", 110 +"px")
+	                .style("display", "block")
+	                .style("padding-top", 3+"px")
+	                .style("margin", "auto")
+	                .style("height", 30+"px")
+	                .style("color", "white")
+	                .style("font-family", "Assistant")
+	                .style("font-size", 10)
+	                .style("background", "black")
+	                .style("border", 0+"px")
+	                .style("border-radius", 8+"px")
+	                .style("pointer-events", "none");
+            })
+	        .on("mouseout", function(d) {
+	            div.transition()
+	                .duration(200)
+	                .style("opacity", 0);
 	        });
 
+	    //creating x axis
 	    g.append("g")
 	        .attr("class", "axis")
 	        .attr("transform", "translate(0," + height + ")")
 	        .call(d3.axisBottom(x0));
 
+	    // creating y axis with hashes
 	    g.append("g")
 	        .attr("class", "axis")
-	        .call(d3.axisLeft(y).ticks(null, "s"))
-	      .append("text")
-	        .attr("x", 2)
-	        .attr("y", y(y.ticks().pop()) + 0.5)
-	        .attr("dy", "0.32em")
-	        .attr("fill", "#000")
-	        .attr("font-weight", "bold")
-	        .attr("text-anchor", "start")
-	        .attr("font-size", 20)
-	        .text("Millitary Expenditure Based on GDP");
+	        .call(d3.axisLeft(y).ticks(null, "s"));
 
+	    //creating x axis labels
+	    svg.append("text")
+	    	.attr("class", "axisLabels")
+	      .attr("transform","translate(" + (width/2) + " ," + (height + margin.top + 40) + ")")
+	      .style("text-anchor", "middle")
+	      .style("font-size", 10)
+	      .style("font-weight", "bold")
+	      .style("font-family", "Assistant")
+	      .text("Country");
+
+		//creating y-axis labels
+	    svg.append("text")
+	    	.attr("class", "axisLabels")
+	      .attr("transform", "rotate(-90)")
+	      .attr("y", 0 - margin.right + 20)
+	      .attr("x",0 - (height / 2) -40)
+	      .attr("dy", "1em")
+	      .style("text-anchor", "middle")
+	      .style("font-size", 10)
+	      .style("font-weight", "bold")
+	      .style("font-family", "Assistant")
+	      .text("Military Expenditure in $USD");
+
+	    //creating title for graph
+	    svg.append("text")
+	    	.attr("class", "axisLabels")
+		    .attr("font-family", "Assistant")
+		    .attr("text-anchor", "top")
+		    .attr("text-align", "center")
+		    .attr("font-weight", "bold")
+		    .attr("font-size", 20)
+		    .attr("x", width/2-200)
+		    .attr("y", 35)
+		    .text("Military Expenditure Based on GDP in $USD (Normal Scale)");
+
+	    // creating the legend for the graph with colors that match year
 	    var legend = g.append("g")
-	        .attr("font-family", "sans-serif")
-	        .attr("font-size", 20)
-	        .attr("text-anchor", "end")
-	        .attr("transform", "translate(0, 10)")
-	      .selectAll("g")
-	      .data(years.slice().reverse())
-	      .enter().append("g")
-	        .attr("transform", function(d, i) {
-	          return "translate(0," + i * 50 + ")";
-	        });
+	      .attr("font-family", "Assistant")
+	      .attr("font-size", 10)
+	      .attr("text-anchor", "end")
+	    .selectAll("g")
+	    .data(years.slice().reverse())
+	    .enter().append("g")
+	      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
 
-	    legend.append("rect")
-	        .attr("x", width - 19)
-	        .attr("width", 50)
-	        .attr("height", 30)
-	        .attr("fill", z);
+	      //creating rectangles filled with color matching bar rectangles
+		  legend.append("rect")
+		      .attr("x", width - 19)
+		      .attr("width", 19)
+		      .attr("height", 19)
+		      .attr("fill", colors);
 
-	    legend.append("text")
-	        .attr("x", width - 30)
-	        .attr("y", 9.5)
-	        .attr("dy", "0.32em")
-	        .text(function(d) {
-	          return d;
-	        });
+		  //creating text for each rectangle in legend
+		  legend.append("text")
+		      .attr("x", width - 24)
+		      .attr("y", 9.5)
+		      .attr("dy", "0.32em")
+		      .text(function(d) { return d; });
 
 	});
+	//Help from: http://bl.ocks.org/juan-cb/ab9a30d0e2ace0d2dc8c
+	// removing axis and rectangles so graph will update based on the button selected
 	svg.selectAll("rect")
         .remove()
         .exit();
     svg.selectAll(".axis")
     	.remove()
     	.exit();
+   	svg.selectAll(".axisLabels")
+   		.remove()
+   		.exit();
 
 }
 function showLog(){
-	var z = d3.scaleOrdinal().range(["#F6948D", "#F5827A", "#F47167", "#F25F54", "#F14D41", "#EF3B2E"]);
+	var colors = d3.scaleOrdinal().range(["#F6948D", "#F5827A", "#F47167", "#F25F54", "#F14D41", "#EF3B2E"]);
+		//collection data form csv file
 	d3.csv("DataExpend.csv", function(d, i, columns) {
+		//parsing out the data by column to help gather country and year data
 	    for (var i = 1, n = columns.length; i < n; ++i)
 	    d[columns[i]] = +Math.log(d[columns[i]]);
-	    console.log("this is d:")
-	    console.log(d)
 	    return d;
 	  }, function(error, data) {
 	    if (error) throw error;
 
+	    //collecting all the years form the data set and making it an array
 	    var years = data.columns.slice(1);
-	    var rects = svg.select(".rect")
-	    console.log(years);
+	    //console.log(years);
 
+	    //setting the x domain to the countries in the data set
 	    x0.domain(data.map(function(d) {
 	      return d.CountryExpend;
 	    }));
+	    // second x domain because showing five graphs per country
 	    x1.domain(years).rangeRound([0, x0.bandwidth()]);
+	    // setting y domain based on the values for each year
 	    y.domain([0, d3.max(data, function(d) {
 	      return d3.max(years, function(years) {
 	        return d[years];
 	      });
 	    })]).nice();
 
-	    rects.enter()
+	    // appending to g
 	    g.append("g")
 	      .selectAll("g")
 	      .data(data)
 	      .enter().append("g")
+	      	//translating/transforming spot where each area for each country will be in the graph
 	        .attr("transform", function(d) {
 	          return "translate(" + x0(d.CountryExpend) + ",0)";
 	        })
 	      .selectAll("rect")
 	      .data(function(d) {
+	      	//collecting the data and maping years and values for country to create rectangles
 	        return years.map(function(years) {
-	          return {years: years, value: d[years]};
+	          return {years: years, value: d[years], country: d.CountryExpend};
 	          });
 	        })
+	      	// creating rectangles based on above with x value year and y value value of the specific year. Appending it so it all clusters together
+	      	// for each country
 	      .enter().append("rect")
 	        .attr("x", function(d) {
 	          return x1(d.years);
@@ -509,63 +595,124 @@ function showLog(){
 	          return height - y(d.value);
 	        })
 	        .attr("fill", function(d) {
-	          return z(d.years);
+	          return colors(d.years);
+	        })
+	        //code from: http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
+	        .on("mouseover", function(d) {
+	            div.transition()
+	                .duration(200)
+	                .style("opacity", .9);
+	            div	.html("Log Scale" +"<br>"+(d.country)+": "+(d.years)+"<br>"+"$"+(Math.round(Math.exp(d.value))))
+	                .style("left", (d3.event.pageX) + "px")
+	                .style("top", (d3.event.pageY - 28) + "px")
+	                .style("position", "absolute")
+	                .style("text-anchor", "middle")
+	                .style("text-align", "center")
+	                .style("width", 130 +"px")
+	                .style("display", "block")
+	                .style("padding-top", 3+"px")
+	                .style("margin", "auto")
+	                .style("height", 40+"px")
+	                .style("color", "white")
+	                .style("font-family", "Assistant")
+	                .style("font-size", 10)
+	                .style("background", "black")
+	                .style("border", 0+"px")
+	                .style("border-radius", 8+"px")
+	                .style("pointer-events", "none");
+            })
+	        .on("mouseout", function(d) {
+	            div.transition()
+	                .duration(200)
+	                .style("opacity", 0);
 	        });
-
+	    //creating x axis
 	    g.append("g")
 	        .attr("class", "axis")
 	        .attr("transform", "translate(0," + height + ")")
 	        .call(d3.axisBottom(x0));
 
+	    // creating y axis with hashes
 	    g.append("g")
 	        .attr("class", "axis")
-	        .call(d3.axisLeft(y).ticks(null, "s"))
-	      .append("text")
-	        .attr("x", 2)
-	        .attr("y", y(y.ticks().pop()) + 0.5)
-	        .attr("dy", "0.32em")
-	        .attr("fill", "#000")
-	        .attr("font-weight", "bold")
-	        .attr("text-anchor", "start")
-	        .text("Millitary Expenditure Based on GDP");
+	        .call(d3.axisLeft(y).ticks(null, "s"));
 
+	    //creating x axis labels
+	    svg.append("text")
+	    .attr("class", "axisLabels")
+	      .attr("transform","translate(" + (width/2) + " ," + (height + margin.top + 40) + ")")
+	      .style("text-anchor", "middle")
+	      .style("font-size", 10)
+	      .style("font-weight", "bold")
+	      .style("font-family", "Assistant")
+	      .text("Country");
+
+		//creating y-axis labels
+	    svg.append("text")
+	    .attr("class", "axisLabels")
+	      .attr("transform", "rotate(-90)")
+	      .attr("y", 0 - margin.right + 20)
+	      .attr("x",0 - (height / 2) -40)
+	      .attr("dy", "1em")
+	      .style("text-anchor", "middle")
+	      .style("font-size", 10)
+	      .style("font-weight", "bold")
+	      .style("font-family", "Assistant")
+	      .text("Log of Military Expenditure in $USD");
+
+	    //creating title for graph
+	    svg.append("text")
+	    	.attr("class", "axisLabels")
+		    .attr("font-family", "Assistant")
+		    .attr("text-anchor", "top")
+		    .attr("text-align", "center")
+		    .attr("font-weight", "bold")
+		    .attr("font-size", 20)
+		    .attr("x", width/2-200)
+		    .attr("y", 35)
+		    .text("Military Expenditure Based on GDP in $USD (Log Scale)");
+
+	    // creating the legend for the graph with colors that match year
 	    var legend = g.append("g")
-	        .attr("font-family", "sans-serif")
-	        .attr("font-size", 20)
-	        .attr("text-anchor", "end")
-	        .attr("transform", "translate(0, 10)")
-	      .selectAll("g")
-	      .data(years.slice().reverse())
-	      .enter().append("g")
-	        .attr("transform", function(d, i) {
-	          return "translate(0," + i * 50 + ")";
-	        });
+	      .attr("font-family", "Assistant")
+	      .attr("font-size", 10)
+	      .attr("text-anchor", "end")
+	    .selectAll("g")
+	    .data(years.slice().reverse())
+	    .enter().append("g")
+	      .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
 
-	    legend.append("rect")
-	        .attr("x", width - 19)
-	        .attr("width", 50)
-	        .attr("height", 30)
-	        .attr("fill", z);
+	      //creating rectangles filled with color matching bar rectangles
+		  legend.append("rect")
+		      .attr("x", width - 19)
+		      .attr("width", 19)
+		      .attr("height", 19)
+		      .attr("fill", colors);
 
-	    legend.append("text")
-	        .attr("x", width - 30)
-	        .attr("y", 9.5)
-	        .attr("dy", "0.32em")
-	        .text(function(d) {
-	          return d;
-	        });
+		  //creating text for each rectangle in legend
+		  legend.append("text")
+		      .attr("x", width - 24)
+		      .attr("y", 9.5)
+		      .attr("dy", "0.32em")
+		      .text(function(d) { return d; });
 
 	});
+	//Help from: http://bl.ocks.org/juan-cb/ab9a30d0e2ace0d2dc8c
+	// removing axis and rectangles so graph will update based on the button selected
 	svg.selectAll("rect")
         .remove()
         .exit();
     svg.selectAll(".axis")
     	.remove()
     	.exit();
-    svg.transition()
-    	.duration(750);
+   	svg.selectAll(".axisLabels")
+   	 	.remove()
+   	 	.exit();
 }
 
 </script>
+<svg id="line" height="5" width="1000">
+  <line x1="0" y1="2" x2="1000" y2="2" stroke-width="2">
+</svg>
 </body>
 </html>
